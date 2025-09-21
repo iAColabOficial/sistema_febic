@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: febic-postgres
+    environment:
+      POSTGRES_DB: febic_db
+      POSTGRES_USER: febic_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    networks:
+      - febic-network
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: febic-backend
+    environment:
+      DATABASE_URL: postgresql://febic_user:${POSTGRES_PASSWORD}@postgres:5432/febic_db
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3002
+      NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      MAX_FILE_SIZE: 20971520
+      UPLOAD_PATH: ./uploads
+    volumes:
+      - uploads_data:/app/uploads
+    expose:
+      - "3002"
+    depends_on:
+      - postgres
+    networks:
+      - febic-network
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: febic-frontend
+    expose:
+      - "80"
+    depends_on:
+      - backend
+    networks:
+      - febic-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: febic-nginx
+    ports:
+      - "9081:8080"
+      - "9444:8443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - uploads_data:/var/www/uploads
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - febic-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  febic-network:
+    driver: bridge

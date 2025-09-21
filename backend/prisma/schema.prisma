@@ -1,0 +1,416 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  I
+  II
+  III
+  IV
+  V
+  VI
+  VII
+  VIII
+  IX
+  RELATO
+}
+
+enum ProjectStatus {
+  RASCUNHO
+  SUBMETIDO
+  EM_ANALISE_CIAS
+  APROVADO_CIAS
+  REPROVADO_CIAS
+  AGUARDANDO_PAGAMENTO
+  CONFIRMADO_VIRTUAL
+  FINALISTA_PRESENCIAL
+  PREMIADO
+  ARQUIVADO
+}
+
+enum UserRole {
+  ADMINISTRADOR
+  AUTOR
+  AVALIADOR
+  ORIENTADOR
+  FEIRA_AFILIADA
+  FINANCEIRO
+}
+
+enum DocumentType {
+  PROJETO_COMPLETO
+  RESUMO_EXECUTIVO
+  DIARIO_BORDO
+  AUTORIZACAO_IMAGEM
+  AUTORIZACAO_RESPONSAVEL
+  COMPROVANTE_PAGAMENTO
+  DECLARACAO_ORIENTADOR
+  DECLARACAO_INSTITUICAO
+  CERTIFICADO_APRESENTACAO
+  RELATORIO_TECNICO
+  ANEXOS_TECNICOS
+  FOTOS_PROJETO
+  VIDEOS_PROJETO
+  PLANILHA_DADOS
+  CERTIFICADO_FEIRA_AFILIADA
+  OUTROS_DOCUMENTOS
+}
+
+enum PaymentStatus {
+  PENDENTE
+  PROCESSANDO
+  APROVADO
+  REJEITADO
+  EXPIRADO
+  ESTORNADO
+  ISENTO
+}
+
+enum PaymentMethod {
+  PIX
+  BOLETO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  TRANSFERENCIA
+  DINHEIRO
+}
+
+enum InstitutionType {
+  PUBLICA_MUNICIPAL
+  PUBLICA_ESTADUAL
+  PUBLICA_FEDERAL
+  PRIVADA
+  FILANTROPIA
+  COOPERATIVA
+  ONG
+}
+
+model AreaConhecimento {
+  id        String @id @default(cuid())
+  sigla     String @unique
+  nome      String
+  nivel     Int
+  paiId     String?
+  isActive  Boolean @default(true)
+  
+  pai       AreaConhecimento? @relation("AreaHierarchy", fields: [paiId], references: [id])
+  filhos    AreaConhecimento[] @relation("AreaHierarchy")
+  projects  Project[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id              String    @id @default(cuid())
+  name            String
+  email           String    @unique
+  cpf             String?   @unique
+  passwordHash    String
+  phone           String?
+  birthDate       DateTime?
+  gender          String?
+  nationality     String?   @default("Brasileiro")
+  address         String?
+  neighborhood    String?
+  city            String?
+  state           String?
+  zipCode         String?
+  country         String?   @default("Brasil")
+  institution     String?
+  position        String?
+  formation       String?
+  role            UserRole  @default(AUTOR)
+  isActive        Boolean   @default(true)
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+  lastLogin       DateTime?
+  loginCount      Int       @default(0)
+  
+  ownedProjects      Project[]           @relation("ProjectOwner")
+  memberProjects     ProjectMember[]
+  orientadorProjects ProjectOrientador[]
+  avaliacoes         ProjectAvaliacao[]
+  managedFeiras      FeiraAfiliada[]
+  notifications      UserNotification[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Project {
+  id                   String             @id @default(cuid())
+  title                String
+  summary              String             @db.Text
+  objective            String             @db.Text
+  methodology          String             @db.Text
+  results              String?            @db.Text
+  conclusion           String?            @db.Text
+  bibliography         String?            @db.Text
+  category             Category
+  areaConhecimentoId   String
+  areaConhecimento     AreaConhecimento   @relation(fields: [areaConhecimentoId], references: [id])
+  keywords             String[]
+  researchLine         String?
+  institution          String
+  institutionCity      String
+  institutionState     String
+  institutionCountry   String             @default("Brasil")
+  isPublicSchool       Boolean            @default(false)
+  isRuralSchool        Boolean            @default(false)
+  isIndigenous         Boolean            @default(false)
+  hasDisability        Boolean            @default(false)
+  socialVulnerability  Boolean            @default(false)
+  status               ProjectStatus      @default(RASCUNHO)
+  currentStage         String?
+  isPaid               Boolean            @default(false)
+  paymentRequired      Boolean            @default(true)
+  paymentAmount        Decimal            @default(120.00) @db.Decimal(10, 2)
+  paymentDueDate       DateTime?
+  isPaymentExempt      Boolean            @default(false)
+  exemptionReason      String?            @db.Text
+  submissionDate       DateTime?
+  ciasResultDate       DateTime?
+  virtualStartDate     DateTime?
+  virtualEndDate       DateTime?
+  presentialDate       DateTime?
+  passedCias           Boolean            @default(false)
+  passedVirtual        Boolean            @default(false)
+  isFinalist           Boolean            @default(false)
+  isAwarded            Boolean            @default(false)
+  feiraAfiliadaId      String?
+  feiraAfiliada        FeiraAfiliada?     @relation(fields: [feiraAfiliadaId], references: [id])
+  ownerId              String
+  owner                User               @relation("ProjectOwner", fields: [ownerId], references: [id])
+  
+  members              ProjectMember[]
+  orientadores         ProjectOrientador[]
+  documents            ProjectDocument[]
+  avaliacoes           ProjectAvaliacao[]
+  pagamentos           ProjectPagamento[]
+  awards               ProjectAward[]
+  
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+model ProjectMember {
+  id            String    @id @default(cuid())
+  projectId     String
+  userId        String?
+  name          String
+  email         String?
+  cpf           String?
+  rg            String?
+  birthDate     DateTime
+  gender        String
+  phone         String?
+  address       String?
+  city          String
+  state         String
+  zipCode       String?
+  schoolLevel   String
+  schoolYear    String?
+  institution   String
+  isIndigenous  Boolean   @default(false)
+  hasDisability Boolean   @default(false)
+  isRural       Boolean   @default(false)
+  
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user          User?     @relation(fields: [userId], references: [id])
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@unique([projectId, cpf])
+}
+
+model ProjectOrientador {
+  id              String   @id @default(cuid())
+  projectId       String
+  userId          String?
+  name            String
+  email           String
+  cpf             String?
+  phone           String?
+  formation       String
+  area            String
+  institution     String
+  position        String?
+  city            String
+  state           String
+  yearsExperience Int?
+  lattesUrl       String?
+  
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user            User?    @relation(fields: [userId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([projectId, email])
+}
+
+model ProjectDocument {
+  id              String   @id @default(cuid())
+  projectId       String
+  name            String
+  filePath        String
+  fileSize        Int
+  mimeType        String
+  description     String?
+  version         Int      @default(1)
+  isRequired      Boolean  @default(false)
+  isApproved      Boolean?
+  rejectionReason String?
+  isPublic        Boolean  @default(false)
+  downloadCount   Int      @default(0)
+  
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  uploadedAt      DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ProjectAvaliacao {
+  id                String   @id @default(cuid())
+  projectId         String
+  avaliadorId       String
+  notaInovacao      Decimal? @db.Decimal(3, 1)
+  notaMetodologia   Decimal? @db.Decimal(3, 1)
+  notaRelevancia    Decimal? @db.Decimal(3, 1)
+  notaApresentacao  Decimal? @db.Decimal(3, 1)
+  notaImpacto       Decimal? @db.Decimal(3, 1)
+  notaViabilidade   Decimal? @db.Decimal(3, 1)
+  notaFinal         Decimal? @db.Decimal(3, 1)
+  pesoTotal         Decimal? @db.Decimal(3, 2) @default(1.00)
+  comentarioGeral   String?  @db.Text
+  pontosFortes      String?  @db.Text
+  pontosMelhoria    String?  @db.Text
+  sugestoes         String?  @db.Text
+  isCompleted       Boolean  @default(false)
+  completedAt       DateTime?
+  
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  avaliador         User     @relation(fields: [avaliadorId], references: [id])
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([projectId, avaliadorId])
+}
+
+model ProjectPagamento {
+  id                String        @id @default(cuid())
+  projectId         String
+  amount            Decimal       @db.Decimal(10, 2)
+  status            PaymentStatus @default(PENDENTE)
+  paymentMethod     PaymentMethod?
+  externalId        String?
+  paymentUrl        String?
+  qrCodePix         String?
+  barcode           String?
+  payerName         String?
+  payerCpf          String?
+  payerEmail        String?
+  dueDate           DateTime
+  paidAt            DateTime?
+  expiresAt         DateTime?
+  transactionId     String?
+  authorizationCode String?
+  notes             String?   @db.Text
+  
+  project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model ProjectAward {
+  id                   String    @id @default(cuid())
+  projectId            String
+  title                String
+  description          String?   @db.Text
+  position             Int?
+  certificateGenerated Boolean   @default(false)
+  certificatePath      String?
+  certificateCode      String?   @unique
+  awardedBy            String?
+  amount               Decimal?  @db.Decimal(10, 2)
+  
+  project              Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  awardedAt            DateTime  @default(now())
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model FeiraAfiliada {
+  id               String    @id @default(cuid())
+  name             String
+  city             String
+  state            String
+  edition          String
+  year             Int
+  startDate        DateTime
+  endDate          DateTime
+  isActive         Boolean   @default(true)
+  credencialToken  String    @unique
+  maxProjects      Int       @default(50)
+  contactName      String
+  contactEmail     String
+  contactPhone     String?
+  managerId        String
+  
+  manager          User      @relation(fields: [managerId], references: [id])
+  projects         Project[]
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model UserNotification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String   @db.Text
+  type      String
+  isRead    Boolean  @default(false)
+  isSent    Boolean  @default(false)
+  data      Json?
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  type        String
+  description String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldData   Json?
+  newData   Json?
+  ipAddress String?
+  userAgent String?
+  
+  createdAt DateTime @default(now())
+}
