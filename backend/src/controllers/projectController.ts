@@ -440,14 +440,19 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
             id: true,
             sigla: true,
             nome: true,
-            nivel: true
+            nivel: true,
+           }
+          },
+          _count: {
+            select: {
+              members: true,
+              orientadores: true
+            }
           }
-        }
-      },
+        },  
       orderBy: {
-        createdAt: 'desc'
-      }
-    });
+        createdAt: 'desc' }
+      });
 
     res.json({ success: true, data: projects });
   } catch (error) {

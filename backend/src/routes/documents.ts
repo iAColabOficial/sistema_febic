@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { auth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { uploadSingle } from '../middleware/multerConfig';
 import {
   uploadDocument,
@@ -14,10 +14,10 @@ import {
 const router = Router();
 
 // Aplicar middleware de autenticação em todas as rotas
-router.use(auth);
+router.use(authenticateToken);
 
 // GET /api/documents/types - Obter tipos de documentos disponíveis
-router.get('/types', (req, res) => {
+router.get('/documents/types', (req, res) => {
   res.json({
     success: true,
     data: DOCUMENT_TYPES
@@ -25,24 +25,24 @@ router.get('/types', (req, res) => {
 });
 
 // POST /api/documents/projects/:projectId/upload - Upload de documento
-router.post('/projects/:projectId/upload', 
+router.post('/documents/projects/:projectId/upload', 
   uploadSingle, 
   uploadDocument
 );
 
 // GET /api/documents/projects/:projectId - Listar documentos de um projeto
-router.get('/projects/:projectId', getProjectDocuments);
+router.get('/documents/projects/:projectId', getProjectDocuments);
 
 // GET /api/documents/:documentId - Obter informações de um documento
-router.get('/:documentId', getDocumentInfo);
+router.get('/documents/:documentId', getDocumentInfo);
 
 // GET /api/documents/:documentId/download - Download de documento
-router.get('/:documentId/download', downloadDocument);
+router.get('/documents/:documentId/download', downloadDocument);
 
 // DELETE /api/documents/:documentId - Excluir documento
-router.delete('/:documentId', deleteDocument);
+router.delete('/documents/:documentId', deleteDocument);
 
 // PUT /api/documents/:documentId/review - Aprovar/Rejeitar documento (Admin/Avaliador)
-router.put('/:documentId/review', reviewDocument);
+router.put('/documents/:documentId/review', reviewDocument);
 
 export default router;
