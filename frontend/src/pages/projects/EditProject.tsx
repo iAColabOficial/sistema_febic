@@ -5,12 +5,14 @@ import {
   Save,
   Loader,
   Home,
-  FileText
+  FileText,
+  Upload,
+  Settings
 } from 'lucide-react';
 import api from '@/services/api';
-// import toast from 'react-hot-toast';
 import { Project } from '@/types/Project';
 import { useAuth } from '@/contexts/AuthContext';
+import DocumentUpload from '@/components/projects/DocumentUpload';
 
 const EditProject: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +21,7 @@ const EditProject: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dados' | 'documentos'>('dados');
   
   // Estados do formulário
   const [formData, setFormData] = useState({
@@ -94,7 +97,8 @@ const EditProject: React.FC = () => {
       
       if (response.data.success) {
         console.log("SUCCESS:", 'Projeto atualizado com sucesso!');
-        navigate('/projects');
+        // Não navegar, apenas mostrar sucesso
+        setProject(prev => prev ? { ...prev, ...formData } : null);
       } else {
         console.log("ERROR:", response.data.message || 'Erro ao atualizar projeto');
       }
@@ -162,7 +166,7 @@ const EditProject: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
@@ -177,7 +181,7 @@ const EditProject: React.FC = () => {
                 <FileText className="h-5 w-5 text-blue-600" />
                 <div>
                   <h1 className="text-xl font-semibold text-gray-900">
-                    Editar Projeto
+                    {project.title}
                   </h1>
                   <p className="text-sm text-gray-600">
                     Categoria {project.category} • Status: {project.status}
@@ -196,169 +200,215 @@ const EditProject: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Tabs */}
+          <div className="mt-6">
+            <nav className="flex space-x-8" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('dados')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'dados'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Dados do Projeto
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('documentos')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'documentos'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Documentos
+                </div>
+              </button>
+            </nav>
+          </div>
         </div>
       </div>
 
-      {/* Formulário */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleUpdateProject} className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            {/* Título */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Título do Projeto *
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            {/* Resumo */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Resumo *
-              </label>
-              <textarea
-                value={formData.summary}
-                onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            {/* Objetivo */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Objetivo *
-              </label>
-              <textarea
-                value={formData.objective}
-                onChange={(e) => setFormData(prev => ({ ...prev, objective: e.target.value }))}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            {/* Metodologia */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Metodologia *
-              </label>
-              <textarea
-                value={formData.methodology}
-                onChange={(e) => setFormData(prev => ({ ...prev, methodology: e.target.value }))}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            {/* Resultados */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Resultados
-              </label>
-              <textarea
-                value={formData.results}
-                onChange={(e) => setFormData(prev => ({ ...prev, results: e.target.value }))}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Conclusão */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Conclusão
-              </label>
-              <textarea
-                value={formData.conclusion}
-                onChange={(e) => setFormData(prev => ({ ...prev, conclusion: e.target.value }))}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Bibliografia */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Bibliografia
-              </label>
-              <textarea
-                value={formData.bibliography}
-                onChange={(e) => setFormData(prev => ({ ...prev, bibliography: e.target.value }))}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Lista das referências utilizadas"
-              />
-            </div>
-
-            {/* Palavras-chave */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Palavras-chave
-              </label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {formData.keywords.map((keyword, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-md"
-                  >
-                    {keyword}
-                    <button
-                      type="button"
-                      onClick={() => removeKeyword(keyword)}
-                      className="ml-1 text-blue-600 hover:text-blue-800"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+      {/* Conteúdo */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'dados' ? (
+          /* Aba de Dados do Projeto */
+          <form onSubmit={handleUpdateProject} className="space-y-6">
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              {/* Título */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Título do Projeto *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
               </div>
-              <input
-                type="text"
-                onKeyPress={addKeyword}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Digite uma palavra-chave e pressione Enter"
-              />
+
+              {/* Resumo */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Resumo *
+                </label>
+                <textarea
+                  value={formData.summary}
+                  onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {/* Objetivo */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Objetivo *
+                </label>
+                <textarea
+                  value={formData.objective}
+                  onChange={(e) => setFormData(prev => ({ ...prev, objective: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {/* Metodologia */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Metodologia *
+                </label>
+                <textarea
+                  value={formData.methodology}
+                  onChange={(e) => setFormData(prev => ({ ...prev, methodology: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {/* Resultados */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Resultados
+                </label>
+                <textarea
+                  value={formData.results}
+                  onChange={(e) => setFormData(prev => ({ ...prev, results: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Conclusão */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Conclusão
+                </label>
+                <textarea
+                  value={formData.conclusion}
+                  onChange={(e) => setFormData(prev => ({ ...prev, conclusion: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Bibliografia */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Bibliografia
+                </label>
+                <textarea
+                  value={formData.bibliography}
+                  onChange={(e) => setFormData(prev => ({ ...prev, bibliography: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Lista das referências utilizadas"
+                />
+              </div>
+
+              {/* Palavras-chave */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Palavras-chave
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.keywords.map((keyword, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-md"
+                    >
+                      {keyword}
+                      <button
+                        type="button"
+                        onClick={() => removeKeyword(keyword)}
+                        className="ml-1 text-blue-600 hover:text-blue-800"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  onKeyPress={addKeyword}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Digite uma palavra-chave e pressione Enter"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Botões */}
-          <div className="flex justify-between">
-            <button
-              type="button"
-              onClick={() => navigate('/projects')}
-              className="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
+            {/* Botões */}
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={() => navigate('/projects')}
+                className="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Voltar
+              </button>
 
-            <button
-              type="submit"
-              disabled={updating}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {updating ? (
-                <>
-                  <Loader className="h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Salvar Alterações
-                </>
-              )}
-            </button>
+              <button
+                type="submit"
+                disabled={updating}
+                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {updating ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Salvar Alterações
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        ) : (
+          /* Aba de Documentos */
+          <div>
+            <DocumentUpload
+              projectId={project.id}
+              onDocumentChange={() => {
+                console.log('Documentos atualizados');
+              }}
+              readOnly={project.status === 'FINALISTA_PRESENCIAL' || project.status === 'PREMIADO'}
+            />
           </div>
-        </form>
+        )}
       </div>
     </div>
   );

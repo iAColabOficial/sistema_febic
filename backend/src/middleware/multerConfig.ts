@@ -1,4 +1,3 @@
-// backend/src/middleware/multerConfig.ts
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -38,15 +37,18 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilt
     'image/gif',                          // GIF
     'application/vnd.ms-excel',           // XLS
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // XLSX
-    'text/plain'                          // TXT
+    'text/plain',                         // TXT
+    'video/mp4',                          // MP4
+    'video/avi',                          // AVI
+    'video/mov'                           // MOV
   ];
   
-  const allowedExtensions = /\.(pdf|doc|docx|jpg|jpeg|png|gif|xls|xlsx|txt)$/i;
+  const allowedExtensions = /\.(pdf|doc|docx|jpg|jpeg|png|gif|xls|xlsx|txt|mp4|avi|mov)$/i;
   
   if (allowedMimes.includes(file.mimetype) && allowedExtensions.test(file.originalname)) {
     cb(null, true);
   } else {
-    cb(new Error(`Tipo de arquivo não permitido: ${file.mimetype}. Tipos aceitos: PDF, DOC, DOCX, JPG, PNG, GIF, XLS, XLSX, TXT`));
+    cb(new Error(`Tipo de arquivo não permitido: ${file.mimetype}. Tipos aceitos: PDF, DOC, DOCX, JPG, PNG, GIF, XLS, XLSX, TXT, MP4, AVI, MOV`));
   }
 };
 
@@ -55,7 +57,7 @@ export const uploadConfig = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB (conforme solicitado)
+    fileSize: 20 * 1024 * 1024, // 20MB
     files: 5 // Máximo 5 arquivos por upload
   }
 });

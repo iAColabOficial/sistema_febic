@@ -35,8 +35,8 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         zipCode: true,
         institution: true,
         formation: true,
-        role: true,           // ✅ ADICIONADO
-        position: true        // ✅ ADICIONADO
+        role: true,
+        position: true
       }
     });
 
@@ -154,9 +154,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       exemptionReason,
     } = req.body;
 
-    // Usar as listas members e orientadores que foram modificadas acima
-
-    // 🏗️ Criar projeto com transação para garantir consistência
+    // 🗃️ Criar projeto com transação para garantir consistência
     const project = await prisma.$transaction(async (tx) => {
       // 1. Criar o projeto principal
       const newProject = await tx.project.create({
@@ -189,9 +187,27 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         }
       });
 
-      // 2. Adicionar integrantes (authors)
+      // 2. Adicionar integrantes (authors) - COM FILTRO DE DUPLICAÇÃO
       if (members && members.length > 0) {
-        const membersData = members.map((member: any) => ({
+        // ⚠️ CORREÇÃO: Filtrar duplicatas por CPF
+        console.log('=== DEBUG MEMBROS AUTOR ===');
+        console.log('Usuário logado:', currentUser.id, currentUser.cpf);
+        console.log('Total membros recebidos:', members.length);
+        console.log('CPFs dos membros:', members.map((m: any) => m.cpf));
+
+        // Filtrar duplicatas por CPF
+        const membersUnicos = members.filter((member: any, index: number, self: any[]) => {
+          const firstIndex = self.findIndex((m: any) => m.cpf === member.cpf);
+          if (index !== firstIndex) {
+            console.log('🔄 Removendo membro duplicado por CPF:', member.name, member.cpf);
+            return false;
+          }
+          return true;
+        });
+
+        console.log('Membros após remover duplicatas:', membersUnicos.length);
+
+        const membersData = membersUnicos.map((member: any) => ({
           projectId: newProject.id,
           userId: member.userId || null,
           name: member.name,
@@ -218,9 +234,9 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         });
       }
 
-      // 3. Adicionar orientadores
+      // 3. Adicionar orientadores (mantém a validação existente)
       if (orientadores && orientadores.length > 0) {
-        // ✅ ADICIONAR ESTA VALIDAÇÃO PARA REMOVER DUPLICATAS
+        // ✅ MANTER ESTA VALIDAÇÃO PARA REMOVER DUPLICATAS DE ORIENTADORES
         const orientadoresUnicos = orientadores.filter((orientador: any, index: number, self: any[]) => 
           index === self.findIndex((o: any) => o.email === orientador.email)
         );
@@ -580,7 +596,6 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Manter outras funções existentes...
 export const updateProject = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;

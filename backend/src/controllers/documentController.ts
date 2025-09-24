@@ -1,476 +1,450 @@
-// backend/src/controllers/documentController.ts (VERSÃO CORRIGIDA)
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
+import { uploadSingle } from '../middleware/multerConfig';
 import path from 'path';
 import fs from 'fs';
-import { deleteFile, formatFileSize } from '../middleware/multerConfig';
 
 const prisma = new PrismaClient();
 
-// Interfaces para tipagem (baseadas no schema real)
-interface UploadDocumentBody {
-  name?: string;
-  description?: string;
-  isRequired?: boolean;
-  isPublic?: boolean;
-}
+// Tipos de documentos baseados no regulamento FEBIC
+export const DOCUMENT_TYPES = {
+  PROJETO_COMPLETO: { name: 'Projeto Completo', required: true, maxSize: 20 },
+  RESUMO_EXECUTIVO: { name: 'Resumo Executivo', required: true, maxSize: 5 },
+  DIARIO_BORDO: { name: 'Diário de Bordo', required: true, maxSize: 10 },
+  AUTORIZACAO_IMAGEM: { name: 'Autorização de Imagem', required: true, maxSize: 5 },
+  AUTORIZACAO_RESPONSAVEL: { name: 'Autorização de Responsável', required: false, maxSize: 5 },
+  COMPROVANTE_PAGAMENTO: { name: 'Comprovante de Pagamento', required: false, maxSize: 5 },
+  DECLARACAO_ORIENTADOR: { name: 'Declaração do Orientador', required: true, maxSize: 5 },
+  DECLARACAO_INSTITUICAO: { name: 'Declaração da Instituição', required: true, maxSize: 5 },
+  CERTIFICADO_APRESENTACAO: { name: 'Certificado de Apresentação', required: false, maxSize: 5 },
+  RELATORIO_TECNICO: { name: 'Relatório Técnico', required: false, maxSize: 10 },
+  ANEXOS_TECNICOS: { name: 'Anexos Técnicos', required: false, maxSize: 20 },
+  FOTOS_PROJETO: { name: 'Fotos do Projeto', required: false, maxSize: 10 },
+  VIDEOS_PROJETO: { name: 'Vídeos do Projeto', required: false, maxSize: 50 },
+  PLANILHA_DADOS: { name: 'Planilha de Dados', required: false, maxSize: 10 },
+  OUTROS_DOCUMENTOS: { name: 'Outros Documentos', required: false, maxSize: 10 }
+};
 
-interface DocumentResponse {
-  id: string;
-  name: string;
-  description?: string | null;
-  fileSize: number;
-  fileSizeFormatted: string;
-  mimeType: string;
-  isRequired: boolean;
-  isPublic: boolean;
-  downloadCount: number;
-  uploadedAt: Date;
-  projectId: string;
-}
-
+// Upload de documento
 export const uploadDocument = async (req: AuthRequest, res: Response) => {
   try {
-    const { projectId } = req.params;
-    const { name, description, isRequired = false, isPublic = false } = req.body as UploadDocumentBody;
     const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    const { projectId } = req.params;
+    const { documentType, description } = req.body;
 
-    // Validar arquivo
+    if (!userId || !userRole) {
+      return res.status(401).json({ success: false, message: 'Não autenticado' });
+    }
+
+    // Verificar se o usuário tem acesso ao projeto
+    const hasAccess = await checkProjectAccess(projectId, userId, userRole);
+    if (!hasAccess) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Sem permissão para este projeto' 
+      });
+    }
+
+    // Verificar se o arquivo foi enviado
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'Arquivo é obrigatório'
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Nenhum arquivo foi enviado' 
       });
     }
 
-    // Validar parâmetros
-    if (!projectId) {
-      deleteFile(req.file.path);
-      return res.status(400).json({
-        success: false,
-        message: 'ID do projeto é obrigatório'
+    // Validar tipo de documento
+    if (!DOCUMENT_TYPES[documentType as keyof typeof DOCUMENT_TYPES]) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Tipo de documento inválido' 
       });
     }
 
-    // Verificar se o projeto existe e se o usuário tem permissão
-    const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        OR: [
-          { ownerId: userId },
-          // Verificar se é membro do projeto
-          { 
-            members: {
-              some: { userId: userId }
-            }
-          },
-          // Admin pode fazer upload em qualquer projeto
-          ...(req.user?.role === 'ADMINISTRADOR' ? [{}] : [])
-        ]
-      },
-      include: {
-        _count: {
-          select: {
-            documents: true
-          }
-        }
-      }
-    });
-
-    if (!project) {
-      deleteFile(req.file.path);
-      return res.status(404).json({
-        success: false,
-        message: 'Projeto não encontrado ou você não tem permissão'
-      });
-    }
-
-    // Verificar limite de documentos (máximo 20 por projeto)
-    if (project._count.documents >= 20) {
-      deleteFile(req.file.path);
-      return res.status(400).json({
-        success: false,
-        message: 'Limite máximo de 20 documentos por projeto atingido'
-      });
-    }
-
-    // Verificar se já existe documento com o mesmo nome
+    // Verificar se já existe um documento deste tipo (alguns tipos são únicos)
     const existingDoc = await prisma.projectDocument.findFirst({
       where: {
         projectId,
-        name: name || req.file.originalname
+        name: documentType
       }
     });
 
     if (existingDoc) {
-      deleteFile(req.file.path);
-      return res.status(400).json({
-        success: false,
-        message: 'Já existe um documento com este nome no projeto'
+      // Remover arquivo antigo
+      try {
+        fs.unlinkSync(existingDoc.filePath);
+      } catch (error) {
+        console.log('Erro ao remover arquivo antigo:', error);
+      }
+
+      // Atualizar documento existente
+      const updatedDocument = await prisma.projectDocument.update({
+        where: { id: existingDoc.id },
+        data: {
+          filePath: req.file.path,
+          fileSize: req.file.size,
+          mimeType: req.file.mimetype,
+          description: description || '',
+          version: existingDoc.version + 1,
+          isApproved: null, // Resetar aprovação
+          rejectionReason: null
+        }
+      });
+
+      return res.json({
+        success: true,
+        data: updatedDocument,
+        message: 'Documento atualizado com sucesso'
       });
     }
 
-    // Criar registro do documento (APENAS com campos que existem no schema)
+    // Criar novo documento
     const document = await prisma.projectDocument.create({
       data: {
         projectId,
-        name: name || req.file.originalname,
+        name: documentType,
         filePath: req.file.path,
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
-        description: description || null,
-        isRequired: Boolean(isRequired),
-        isPublic: Boolean(isPublic)
-        // Removido: documentType (não existe no schema)
+        description: description || '',
+        isRequired: DOCUMENT_TYPES[documentType as keyof typeof DOCUMENT_TYPES].required
       }
     });
-
-    // Log da ação
-    console.log(`📁 Upload realizado: ${document.name} por usuário ${userId} no projeto ${projectId}`);
-
-    // Resposta formatada (APENAS com campos que existem)
-    const response: DocumentResponse = {
-      id: document.id,
-      name: document.name,
-      description: document.description,
-      fileSize: document.fileSize,
-      fileSizeFormatted: formatFileSize(document.fileSize),
-      mimeType: document.mimeType,
-      isRequired: document.isRequired,
-      isPublic: document.isPublic,
-      downloadCount: document.downloadCount,
-      uploadedAt: document.uploadedAt,
-      projectId: document.projectId
-    };
 
     res.status(201).json({
       success: true,
-      message: 'Documento enviado com sucesso',
-      data: response
+      data: document,
+      message: 'Documento enviado com sucesso'
     });
 
   } catch (error) {
-    // Deletar arquivo em caso de erro
-    if (req.file && fs.existsSync(req.file.path)) {
-      deleteFile(req.file.path);
-    }
+    console.error('Erro no upload de documento:', error);
     
-    console.error('❌ Erro no upload:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
-    });
+    // Remover arquivo se houve erro
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkError) {
+        console.error('Erro ao remover arquivo após falha:', unlinkError);
+      }
+    }
+
+    const message = error instanceof Error ? error.message : 'Erro interno';
+    res.status(500).json({ success: false, message });
   }
 };
 
+// Listar documentos de um projeto
 export const getProjectDocuments = async (req: AuthRequest, res: Response) => {
   try {
-    const { projectId } = req.params;
     const userId = req.user?.userId;
-    const { public_only } = req.query;
+    const userRole = req.user?.role;
+    const { projectId } = req.params;
 
-    // Verificar permissão
-    const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        OR: [
-          { ownerId: userId },
-          { 
-            members: {
-              some: { userId: userId }
-            }
-          },
-          ...(req.user?.role === 'ADMINISTRADOR' ? [{}] : []),
-          // Se for público, qualquer um pode ver documentos públicos
-          ...(public_only === 'true' ? [{}] : [])
-        ]
-      }
-    });
+    if (!userId || !userRole) {
+      return res.status(401).json({ success: false, message: 'Não autenticado' });
+    }
 
-    if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: 'Projeto não encontrado'
+    // Verificar acesso ao projeto
+    const hasAccess = await checkProjectAccess(projectId, userId, userRole);
+    if (!hasAccess) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Sem permissão para este projeto' 
       });
     }
 
-    // Filtros para busca
-    const whereClause: any = { 
-      projectId,
-      ...(public_only === 'true' ? { isPublic: true } : {})
-      // Removido: filtro por type (documentType não existe)
-    };
-
+    // Buscar documentos do projeto
     const documents = await prisma.projectDocument.findMany({
-      where: whereClause,
+      where: { projectId },
       orderBy: [
-        { isRequired: 'desc' },  // Documentos obrigatórios primeiro
-        { uploadedAt: 'desc' }   // Mais recentes primeiro
-      ],
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        fileSize: true,
-        mimeType: true,
-        isRequired: true,
-        isPublic: true,
-        downloadCount: true,
-        uploadedAt: true
-        // Removido: documentType (não existe no schema)
-      }
+        { isRequired: 'desc' },
+        { name: 'asc' },
+        { uploadedAt: 'desc' }
+      ]
     });
 
-    // Formatar resposta
-    const formattedDocuments = documents.map(doc => ({
-      ...doc,
-      fileSizeFormatted: formatFileSize(doc.fileSize)
-    }));
+    // Criar lista de documentos esperados vs enviados
+    const documentStatus = Object.entries(DOCUMENT_TYPES).map(([key, config]) => {
+      const existingDoc = documents.find(doc => doc.name === key);
+      return {
+        type: key,
+        name: config.name,
+        required: config.required,
+        maxSize: config.maxSize,
+        status: existingDoc ? 'uploaded' : 'pending',
+        document: existingDoc || null
+      };
+    });
 
     res.json({
       success: true,
-      data: formattedDocuments,
-      count: formattedDocuments.length
+      data: {
+        documents: documentStatus,
+        uploadedCount: documents.length,
+        requiredCount: Object.values(DOCUMENT_TYPES).filter(d => d.required).length
+      }
     });
 
   } catch (error) {
-    console.error('❌ Erro ao buscar documentos:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
+    console.error('Erro ao buscar documentos:', error);
+    res.status(500).json({ success: false, message: 'Erro interno' });
   }
 };
 
+// Download de documento
 export const downloadDocument = async (req: AuthRequest, res: Response) => {
   try {
-    const { documentId } = req.params;
     const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    const { documentId } = req.params;
 
-    const document = await prisma.projectDocument.findFirst({
+    if (!userId || !userRole) {
+      return res.status(401).json({ success: false, message: 'Não autenticado' });
+    }
+
+    // Buscar documento
+    const document = await prisma.projectDocument.findUnique({
       where: { id: documentId },
       include: {
         project: {
           select: {
             id: true,
-            ownerId: true,
             title: true,
-            status: true,
-            members: {
-              select: { userId: true }
-            }
+            ownerId: true,
+            members: { select: { userId: true } },
+            orientadores: { select: { userId: true } }
           }
         }
       }
     });
 
     if (!document) {
-      return res.status(404).json({
-        success: false,
-        message: 'Documento não encontrado'
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Documento não encontrado' 
       });
     }
 
-    // Verificar permissão mais detalhada
-    const isOwner = document.project.ownerId === userId;
-    const isMember = document.project.members.some(member => member.userId === userId);
-    const isAdmin = req.user?.role === 'ADMINISTRADOR';
-    const isPublicDoc = document.isPublic;
-
-    const hasPermission = isOwner || isMember || isAdmin || isPublicDoc;
-
-    if (!hasPermission) {
-      return res.status(403).json({
-        success: false,
-        message: 'Sem permissão para acessar este documento'
+    // Verificar permissão
+    const hasAccess = await checkProjectAccess(document.projectId, userId, userRole);
+    if (!hasAccess) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Sem permissão para este documento' 
       });
     }
 
     // Verificar se arquivo existe
     if (!fs.existsSync(document.filePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Arquivo não encontrado no servidor'
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Arquivo não encontrado no servidor' 
       });
     }
 
     // Incrementar contador de downloads
     await prisma.projectDocument.update({
       where: { id: documentId },
-      data: { downloadCount: { increment: 1 } }
+      data: { downloadCount: document.downloadCount + 1 }
     });
-
-    // Log do download
-    console.log(`📥 Download: ${document.name} por usuário ${userId}`);
 
     // Enviar arquivo
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.name)}"`);
+    const filename = path.basename(document.filePath);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', document.mimeType);
-    res.setHeader('Content-Length', document.fileSize.toString());
     
-    res.sendFile(path.resolve(document.filePath));
+    const fileStream = fs.createReadStream(document.filePath);
+    fileStream.pipe(res);
 
   } catch (error) {
-    console.error('❌ Erro no download:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
+    console.error('Erro no download:', error);
+    res.status(500).json({ success: false, message: 'Erro interno' });
   }
 };
 
+// Excluir documento
 export const deleteDocument = async (req: AuthRequest, res: Response) => {
   try {
-    const { documentId } = req.params;
     const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    const { documentId } = req.params;
 
-    const document = await prisma.projectDocument.findFirst({
-      where: { id: documentId },
-      include: {
-        project: {
-          select: {
-            id: true,
-            ownerId: true,
-            status: true,
-            members: {
-              select: { userId: true }
-            }
-          }
-        }
-      }
+    if (!userId || !userRole) {
+      return res.status(401).json({ success: false, message: 'Não autenticado' });
+    }
+
+    // Buscar documento
+    const document = await prisma.projectDocument.findUnique({
+      where: { id: documentId }
     });
 
     if (!document) {
-      return res.status(404).json({
-        success: false,
-        message: 'Documento não encontrado'
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Documento não encontrado' 
       });
     }
 
-    // Verificar permissões
-    const isOwner = document.project.ownerId === userId;
-    const isMember = document.project.members.some(member => member.userId === userId);
-    const isAdmin = req.user?.role === 'ADMINISTRADOR';
-
-    const canDelete = isOwner || isAdmin || (isMember && document.project.status === 'RASCUNHO');
-
-    if (!canDelete) {
-      return res.status(403).json({
-        success: false,
-        message: 'Sem permissão para deletar este documento'
+    // Verificar permissão
+    const hasAccess = await checkProjectAccess(document.projectId, userId, userRole);
+    if (!hasAccess) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Sem permissão para excluir este documento' 
       });
     }
 
-    // Não pode deletar se projeto já foi submetido (exceto admin)
-    if (document.project.status !== 'RASCUNHO' && !isAdmin) {
-      return res.status(400).json({
-        success: false,
-        message: 'Não é possível deletar documentos de projetos já submetidos'
-      });
+    // Remover arquivo físico
+    try {
+      if (fs.existsSync(document.filePath)) {
+        fs.unlinkSync(document.filePath);
+      }
+    } catch (error) {
+      console.log('Erro ao remover arquivo físico:', error);
     }
 
-    // Deletar arquivo físico
-    const fileDeleted = deleteFile(document.filePath);
-    
-    // Deletar registro
+    // Remover do banco
     await prisma.projectDocument.delete({
       where: { id: documentId }
     });
 
-    // Log da ação
-    console.log(`🗑️ Documento deletado: ${document.name} por usuário ${userId}`);
-
     res.json({
       success: true,
-      message: 'Documento deletado com sucesso',
-      fileDeleted
+      message: 'Documento excluído com sucesso'
     });
 
   } catch (error) {
-    console.error('❌ Erro ao deletar documento:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
+    console.error('Erro ao excluir documento:', error);
+    res.status(500).json({ success: false, message: 'Erro interno' });
   }
 };
 
-// Nova função: Obter informações de um documento específico
+// Aprovar/Rejeitar documento (Admin/Avaliador)
+export const reviewDocument = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    const { documentId } = req.params;
+    const { approved, rejectionReason } = req.body;
+
+    if (!userId || !userRole) {
+      return res.status(401).json({ success: false, message: 'Não autenticado' });
+    }
+
+    // Apenas admin/avaliador pode aprovar
+    if (userRole !== 'ADMINISTRADOR' && userRole !== 'AVALIADOR') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Sem permissão para revisar documentos' 
+      });
+    }
+
+    const document = await prisma.projectDocument.update({
+      where: { id: documentId },
+      data: {
+        isApproved: approved,
+        rejectionReason: approved ? null : rejectionReason
+      }
+    });
+
+    res.json({
+      success: true,
+      data: document,
+      message: approved ? 'Documento aprovado' : 'Documento rejeitado'
+    });
+
+  } catch (error) {
+    console.error('Erro ao revisar documento:', error);
+    res.status(500).json({ success: false, message: 'Erro interno' });
+  }
+};
+
+// Obter informações de um documento específico
 export const getDocumentInfo = async (req: AuthRequest, res: Response) => {
   try {
-    const { documentId } = req.params;
     const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    const { documentId } = req.params;
 
-    const document = await prisma.projectDocument.findFirst({
+    if (!userId || !userRole) {
+      return res.status(401).json({ success: false, message: 'Não autenticado' });
+    }
+
+    const document = await prisma.projectDocument.findUnique({
       where: { id: documentId },
       include: {
         project: {
           select: {
             id: true,
             title: true,
-            ownerId: true,
-            members: {
-              select: { userId: true }
-            }
+            ownerId: true
           }
         }
       }
     });
 
     if (!document) {
-      return res.status(404).json({
-        success: false,
-        message: 'Documento não encontrado'
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Documento não encontrado' 
       });
     }
 
     // Verificar permissão
-    const isOwner = document.project.ownerId === userId;
-    const isMember = document.project.members.some(member => member.userId === userId);
-    const isAdmin = req.user?.role === 'ADMINISTRADOR';
-    const isPublicDoc = document.isPublic;
-
-    const hasPermission = isOwner || isMember || isAdmin || isPublicDoc;
-
-    if (!hasPermission) {
-      return res.status(403).json({
-        success: false,
-        message: 'Sem permissão para acessar este documento'
+    const hasAccess = await checkProjectAccess(document.projectId, userId, userRole);
+    if (!hasAccess) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Sem permissão para este documento' 
       });
     }
 
-    const response = {
-      id: document.id,
-      name: document.name,
-      description: document.description,
-      fileSize: document.fileSize,
-      fileSizeFormatted: formatFileSize(document.fileSize),
-      mimeType: document.mimeType,
-      isRequired: document.isRequired,
-      isPublic: document.isPublic,
-      downloadCount: document.downloadCount,
-      uploadedAt: document.uploadedAt,
-      project: {
-        id: document.project.id,
-        title: document.project.title
-      }
-    };
-
     res.json({
       success: true,
-      data: response
+      data: document
     });
 
   } catch (error) {
-    console.error('❌ Erro ao buscar informações do documento:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
+    console.error('Erro ao buscar informações do documento:', error);
+    res.status(500).json({ success: false, message: 'Erro interno' });
   }
 };
 
-// Re-exportar o middleware para manter compatibilidade
-export { uploadSingle as upload } from '../middleware/multerConfig';
+// Função auxiliar para verificar acesso ao projeto
+async function checkProjectAccess(projectId: string, userId: string, userRole: string): Promise<boolean> {
+  if (userRole === 'ADMINISTRADOR') {
+    return true;
+  }
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      members: { select: { userId: true } },
+      orientadores: { select: { userId: true } }
+    }
+  });
+
+  if (!project) {
+    return false;
+  }
+
+  // Owner sempre tem acesso
+  if (project.ownerId === userId) {
+    return true;
+  }
+
+  // Verificar se é membro
+  if (project.members.some(member => member.userId === userId)) {
+    return true;
+  }
+
+  // Verificar se é orientador
+  if (project.orientadores.some(orientador => orientador.userId === userId)) {
+    return true;
+  }
+
+  return false;
+}
