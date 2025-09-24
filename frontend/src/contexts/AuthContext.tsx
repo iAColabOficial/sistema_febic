@@ -7,7 +7,7 @@ interface User {
   name: string;
   email: string;
   role: string;
-  [key: string]: any; // Para outras propriedades do usuário
+  [key: string]: any;
 }
 
 interface AuthContextType {
@@ -61,23 +61,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('token', userToken);
       localStorage.setItem('user', JSON.stringify(userData));
       
-      setUser(userData); // Remove o 'as User'
+      // SÓ definir user em caso de sucesso
+      setUser(userData);
       setToken(userToken);
       
       toast.success(`Bem-vindo(a)!`);
       return true;
     } else {
-      toast.error(response.message || 'Erro no login');
+      // NÃO mexer no state user em caso de falha
       return false;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro no login:', error);
-    toast.error('Erro ao fazer login');
-    return false;
-  } finally {
-    setLoading(false);
-  }
-};
+      
+      // Verificar o tipo de erro e NÃO mostrar toast genérico
+      if (error.response?.status === 401) {
+        console.log('Credenciais inválidas (401)');
+      } else if (error.response?.status === 404) {
+        console.log('Usuário não encontrado (404)');
+      } else {
+        console.log('Erro de conexão ou servidor');
+      }
+      
+      // NÃO mostrar toast - deixar o Login.tsx cuidar da UI
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const logout = () => {
     authService.logout();

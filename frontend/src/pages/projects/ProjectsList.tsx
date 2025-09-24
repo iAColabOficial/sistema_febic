@@ -12,9 +12,9 @@ import {
   CreateProjectData, 
   PROJECT_CATEGORIES, 
   PROJECT_STATUS,
-  ProjectFilters,    // ✅ Adicionado
-  ProjectStatus,     // ✅ Adicionado  
-  ProjectCategory    // ✅ Adicionado
+  ProjectFilters,    // âœ… Adicionado
+  ProjectStatus,     // âœ… Adicionado  
+  ProjectCategory    // âœ… Adicionado
 } from '../../types/Project';
 
 const ProjectsList: React.FC = () => {
@@ -23,11 +23,11 @@ const ProjectsList: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   
-  // ✅ CORRIGIDO: Tipagem correta do filters
+  // âœ… CORRIGIDO: Tipagem correta do filters
   const [filters, setFilters] = useState<ProjectFilters>({
     search: '',
-    status: undefined,    // ✅ ProjectStatus | undefined
-    category: undefined   // ✅ ProjectCategory | undefined
+    status: undefined,    // âœ… ProjectStatus | undefined
+    category: undefined   // âœ… ProjectCategory | undefined
   });
 
   const {
@@ -51,7 +51,7 @@ const ProjectsList: React.FC = () => {
   };
 
   const handleEditProject = (project: Project) => {
-    // Navegar para página de edição
+    // Navegar para pÃ¡gina de ediÃ§Ã£o
     navigate(`/projects/edit/${project.id}`);
   };
 
@@ -62,14 +62,14 @@ const ProjectsList: React.FC = () => {
   };
 
   const handleSubmitProject = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja enviar este projeto para avaliação?')) {
+    if (window.confirm('Tem certeza que deseja enviar este projeto para avaliaÃ§Ã£o?')) {
       await submitProject(id);
       setSelectedProject(null);
     }
   };
 
   const handleUpdateProjectStatus = async (id: string, status: string) => {
-    const action = status === 'APROVADO_CIAS' ? 'aprovar' : 'desclassificar'; // ✅ CORRIGIDO: status válido
+    const action = status === 'APROVADO_CIAS' ? 'aprovar' : 'desclassificar'; // âœ… CORRIGIDO: status vÃ¡lido
     if (window.confirm(`Tem certeza que deseja ${action} este projeto?`)) {
       await updateProjectStatus(id, status);
       setSelectedProject(null);
@@ -138,7 +138,7 @@ const ProjectsList: React.FC = () => {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  value={filters.search || ''} // ✅ CORRIGIDO: Tratar undefined
+                  value={filters.search || ''} // âœ… CORRIGIDO: Tratar undefined
                   onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                   placeholder="Buscar projetos..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -151,10 +151,10 @@ const ProjectsList: React.FC = () => {
                 Status
               </label>
               <select
-                value={filters.status || ''} // ✅ CORRIGIDO: Tratar undefined
+                value={filters.status || ''} // âœ… CORRIGIDO: Tratar undefined
                 onChange={(e) => setFilters(prev => ({ 
                   ...prev, 
-                  status: e.target.value ? e.target.value as ProjectStatus : undefined // ✅ CORRIGIDO: Casting correto
+                  status: e.target.value ? e.target.value as ProjectStatus : undefined // âœ… CORRIGIDO: Casting correto
                 }))}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
@@ -172,10 +172,10 @@ const ProjectsList: React.FC = () => {
                 Categoria
               </label>
               <select
-                value={filters.category || ''} // ✅ CORRIGIDO: Tratar undefined
+                value={filters.category || ''} // âœ… CORRIGIDO: Tratar undefined
                 onChange={(e) => setFilters(prev => ({ 
                   ...prev, 
-                  category: e.target.value ? e.target.value as ProjectCategory : undefined // ✅ CORRIGIDO: Casting correto
+                  category: e.target.value ? e.target.value as ProjectCategory : undefined // âœ… CORRIGIDO: Casting correto
                 }))}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
@@ -193,7 +193,7 @@ const ProjectsList: React.FC = () => {
         {/* Projects Grid */}
         {projects.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">📄</div>
+            <div className="text-gray-400 text-6xl mb-4">ðŸ“„</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Nenhum projeto encontrado
             </h3>

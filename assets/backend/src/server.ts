@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import fs from 'fs';
+import adminRoutes from './routes/admin';
 
 // Configurar variáveis de ambiente PRIMEIRO
 dotenv.config();
@@ -109,6 +110,8 @@ app.use('/api/projects', projectRoutes);
 // Rotas de documentos (já inclui /api)
 app.use('/api', documentRoutes);
 
+app.use('/api/admin', adminRoutes);
+
 // Rotas de avaliações (já inclui /api)
 // app.use('/api', evaluationRoutes); // TODO: Adicionar quando implementar avaliações
 
@@ -162,6 +165,7 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
     })
   });
 });
+
 
 // ========================================
 // INICIALIZAÇÃO DO SERVIDOR

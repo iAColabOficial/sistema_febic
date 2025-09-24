@@ -140,7 +140,7 @@ export const CreateProject = () => {
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(prev + 1, totalSteps));
     } else {
-      toast.error('Preencha todos os campos obrigatórios antes de continuar');
+      console.log("ERROR:", 'Preencha todos os campos obrigatórios antes de continuar');
     }
   };
 
@@ -228,7 +228,7 @@ export const CreateProject = () => {
 
   const handleSubmit = async () => {
     if (!validateStep(currentStep)) {
-      toast.error('Verifique todos os campos obrigatórios');
+      console.log("ERROR:", 'Verifique todos os campos obrigatórios');
       return;
     }
 
@@ -240,11 +240,11 @@ export const CreateProject = () => {
         orientadores
       } as CreateProjectRequest);
       if (project) {
-        toast.success('Projeto criado com sucesso!');
+        console.log("SUCCESS:", 'Projeto criado com sucesso!');
         navigate('/projects');
       }
     } catch (error) {
-      toast.error('Erro ao criar projeto');
+      console.log("ERROR:", 'Erro ao criar projeto');
     } finally {
       setLoading(false);
     }

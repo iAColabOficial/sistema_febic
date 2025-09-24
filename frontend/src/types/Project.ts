@@ -20,9 +20,9 @@ export type OrientadorTipo = 'ORIENTADOR' | 'COORIENTADOR';
 // ===== INTERFACES PRINCIPAIS =====
 
 export interface Project {
-  id: string; // ✅ string (CUID) - CORRIGIDO: agora é string, não number
-  title: string; // ✅ title (não titulo)
-  summary: string; // ✅ summary (não resumo)
+  id: string; // âœ… string (CUID) - CORRIGIDO: agora Ã© string, nÃ£o number
+  title: string; // âœ… title (nÃ£o titulo)
+  summary: string; // âœ… summary (nÃ£o resumo)
   objective: string;
   methodology: string;
   results?: string;
@@ -42,7 +42,7 @@ export interface Project {
   hasDisability: boolean;
   socialVulnerability: boolean;
   status: ProjectStatus;
-  ownerId: string; // ✅ ownerId (não createdBy)
+  ownerId: string; // âœ… ownerId (nÃ£o createdBy)
   isPaid: boolean;
   paymentRequired: boolean;
   isPaymentExempt: boolean;
@@ -51,7 +51,7 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   
-  // ✅ ADICIONADAS: Propriedades que faltavam e estavam sendo usadas nos componentes
+  // âœ… ADICIONADAS: Propriedades que faltavam e estavam sendo usadas nos componentes
   _count?: {
     members?: number;
     orientadores?: number;
@@ -78,7 +78,7 @@ export interface Project {
 
 export interface ProjectMemberWithUser {
   id: number;
-  projectId: string; // ✅ CORRIGIDO: string ao invés de number
+  projectId: string; // âœ… CORRIGIDO: string ao invÃ©s de number
   userId: number;
   role: MemberRole;
   createdAt: string;
@@ -91,7 +91,7 @@ export interface ProjectMemberWithUser {
 
 export interface ProjectOrientadorWithUser {
   id: number;
-  projectId: string; // ✅ CORRIGIDO: string ao invés de number
+  projectId: string; // âœ… CORRIGIDO: string ao invÃ©s de number
   userId: number;
   tipo: OrientadorTipo;
   createdAt: string;
@@ -104,7 +104,7 @@ export interface ProjectOrientadorWithUser {
 
 export interface ProjectDocumentInfo {
   id: number;
-  projectId: string; // ✅ CORRIGIDO: string ao invés de number
+  projectId: string; // âœ… CORRIGIDO: string ao invÃ©s de number
   documentType: string;
   fileName: string;
   filePath: string;
@@ -116,13 +116,13 @@ export interface ProjectDocumentInfo {
 
 export interface AreaConhecimento {
   id: string;
-  sigla: string; // ✅ Corrigido
+  sigla: string; // âœ… Corrigido
   nome: string;
   nivel: number;
-  paiId?: string; // ✅ Corrigido
+  paiId?: string; // âœ… Corrigido
 }
 
-// ===== FORMULÁRIOS =====
+// ===== FORMULÃRIOS =====
 
 export interface ProjectMember {
   userId?: string;
@@ -162,7 +162,7 @@ export interface ProjectOrientador {
 }
 
 export interface CreateProjectData {
-  // Dados básicos
+  // Dados bÃ¡sicos
   title: string;
   summary: string;
   objective: string;
@@ -171,7 +171,7 @@ export interface CreateProjectData {
   conclusion?: string;
   bibliography?: string;
   
-  // Categoria e área
+  // Categoria e Ã¡rea
   category: ProjectCategory | '';
   areaConhecimentoId: string;
   keywords: string[];
@@ -198,19 +198,19 @@ export interface CreateProjectData {
   exemptionReason?: string;
 }
 
-// ✅ ADICIONADA: Interface que estava sendo importada mas não existia
+// âœ… ADICIONADA: Interface que estava sendo importada mas nÃ£o existia
 export interface CreateProjectRequest extends CreateProjectData {}
 
 export interface UpdateProjectData {
-  title?: string; // ✅ CORRIGIDO: title ao invés de titulo
-  category?: ProjectCategory; // ✅ CORRIGIDO: category ao invés de categoria
+  title?: string; // âœ… CORRIGIDO: title ao invÃ©s de titulo
+  category?: ProjectCategory; // âœ… CORRIGIDO: category ao invÃ©s de categoria
   areaConhecimentoId?: string;
-  summary?: string; // ✅ CORRIGIDO: summary ao invés de resumo
+  summary?: string; // âœ… CORRIGIDO: summary ao invÃ©s de resumo
   keywords?: string;
-  institution?: string; // ✅ CORRIGIDO: institution ao invés de institutionName
+  institution?: string; // âœ… CORRIGIDO: institution ao invÃ©s de institutionName
   institutionState?: string;
   institutionCity?: string;
-  isPublicSchool?: boolean; // ✅ CORRIGIDO: isPublicSchool ao invés de isPublicInstitution
+  isPublicSchool?: boolean; // âœ… CORRIGIDO: isPublicSchool ao invÃ©s de isPublicInstitution
   isFullTimeInstitution?: boolean;
 }
 
@@ -218,7 +218,7 @@ export interface UpdateProjectData {
 
 export interface ProjectFilters {
   search?: string;
-  category?: ProjectCategory; // ✅ CORRIGIDO: category ao invés de categoria
+  category?: ProjectCategory; // âœ… CORRIGIDO: category ao invÃ©s de categoria
   status?: ProjectStatus;
   areaConhecimentoId?: string;
   isCredenciado?: boolean;
@@ -250,50 +250,50 @@ export interface ProjectStats {
   pendingPayments: number;
 }
 
-// ===== CONFIGURAÇÕES POR CATEGORIA =====
+// ===== CONFIGURAÃ‡Ã•ES POR CATEGORIA =====
 
 export const PROJECT_CATEGORIES = [
   {
     value: 'I' as ProjectCategory,
-    label: 'I - Educação Infantil (3-6 anos)',
+    label: 'I - EducaÃ§Ã£o Infantil (3-6 anos)',
     maxParticipants: 6,
     ageRange: '3-6 anos'
   },
   {
     value: 'II' as ProjectCategory,
-    label: 'II - Ensino Fundamental 1º-3º ano',
+    label: 'II - Ensino Fundamental 1Âº-3Âº ano',
     maxParticipants: 5,
-    ageRange: '1º-3º ano'
+    ageRange: '1Âº-3Âº ano'
   },
   {
     value: 'III' as ProjectCategory,
-    label: 'III - Ensino Fundamental 4º-6º ano',
+    label: 'III - Ensino Fundamental 4Âº-6Âº ano',
     maxParticipants: 5,
-    ageRange: '4º-6º ano'
+    ageRange: '4Âº-6Âº ano'
   },
   {
     value: 'IV' as ProjectCategory,
-    label: 'IV - Ensino Fundamental 7º-9º ano',
+    label: 'IV - Ensino Fundamental 7Âº-9Âº ano',
     maxParticipants: 3,
-    ageRange: '7º-9º ano'
+    ageRange: '7Âº-9Âº ano'
   },
   {
     value: 'V' as ProjectCategory,
-    label: 'V - Ensino Médio',
+    label: 'V - Ensino MÃ©dio',
     maxParticipants: 3,
-    ageRange: 'Ensino Médio'
+    ageRange: 'Ensino MÃ©dio'
   },
   {
     value: 'VI' as ProjectCategory,
-    label: 'VI - Educação de Jovens e Adultos (EJA)',
+    label: 'VI - EducaÃ§Ã£o de Jovens e Adultos (EJA)',
     maxParticipants: 3,
     ageRange: 'EJA'
   },
   {
     value: 'VII' as ProjectCategory,
-    label: 'VII - Técnico',
+    label: 'VII - TÃ©cnico',
     maxParticipants: 3,
-    ageRange: 'Técnico'
+    ageRange: 'TÃ©cnico'
   },
   {
     value: 'VIII' as ProjectCategory,
@@ -303,13 +303,13 @@ export const PROJECT_CATEGORIES = [
   },
   {
     value: 'IX' as ProjectCategory,
-    label: 'IX - Pós-graduação',
+    label: 'IX - PÃ³s-graduaÃ§Ã£o',
     maxParticipants: 3,
-    ageRange: 'Pós-graduação'
+    ageRange: 'PÃ³s-graduaÃ§Ã£o'
   },
   {
     value: 'RELATO' as ProjectCategory,
-    label: 'RELATO - Experiência Científico-Pedagógica',
+    label: 'RELATO - ExperiÃªncia CientÃ­fico-PedagÃ³gica',
     maxParticipants: 5,
     ageRange: 'Educadores'
   }
@@ -318,7 +318,7 @@ export const PROJECT_CATEGORIES = [
 export const PROJECT_STATUS = [
   { value: 'RASCUNHO', label: 'Rascunho', color: 'gray' },
   { value: 'SUBMETIDO', label: 'Submetido', color: 'blue' },
-  { value: 'EM_ANALISE_CIAS', label: 'Em Análise CIAS', color: 'yellow' },
+  { value: 'EM_ANALISE_CIAS', label: 'Em AnÃ¡lise CIAS', color: 'yellow' },
   { value: 'APROVADO_CIAS', label: 'Aprovado CIAS', color: 'green' },
   { value: 'REPROVADO_CIAS', label: 'Reprovado CIAS', color: 'red' },
   { value: 'AGUARDANDO_PAGAMENTO', label: 'Aguardando Pagamento', color: 'yellow' },
@@ -335,16 +335,16 @@ export const PROJECT_STATUS_INFO: Record<ProjectStatus, {
 }> = {
   'RASCUNHO': {
     label: 'Rascunho',
-    description: 'Projeto em elaboração',
+    description: 'Projeto em elaboraÃ§Ã£o',
     color: 'gray'
   },
   'SUBMETIDO': {
     label: 'Submetido',
-    description: 'Enviado para avaliação',
+    description: 'Enviado para avaliaÃ§Ã£o',
     color: 'blue'
   },
   'EM_ANALISE_CIAS': {
-    label: 'Em Análise CIAS',
+    label: 'Em AnÃ¡lise CIAS',
     description: 'Sendo avaliado pelo CIAS',
     color: 'blue'
   },
@@ -360,12 +360,12 @@ export const PROJECT_STATUS_INFO: Record<ProjectStatus, {
   },
   'AGUARDANDO_PAGAMENTO': {
     label: 'Aguardando Pagamento',
-    description: 'Aguardando confirmação de pagamento',
+    description: 'Aguardando confirmaÃ§Ã£o de pagamento',
     color: 'yellow'
   },
   'CONFIRMADO_VIRTUAL': {
     label: 'Confirmado Virtual',
-    description: 'Participação virtual confirmada',
+    description: 'ParticipaÃ§Ã£o virtual confirmada',
     color: 'blue'
   },
   'FINALISTA_PRESENCIAL': {
@@ -385,7 +385,7 @@ export const PROJECT_STATUS_INFO: Record<ProjectStatus, {
   }
 };
 
-// ✅ ADICIONADA: Constante que estava sendo importada mas não existia
+// âœ… ADICIONADA: Constante que estava sendo importada mas nÃ£o existia
 export const CATEGORY_INFO = PROJECT_CATEGORIES.reduce((acc, cat) => {
   acc[cat.value] = {
     label: cat.label,
@@ -395,7 +395,7 @@ export const CATEGORY_INFO = PROJECT_CATEGORIES.reduce((acc, cat) => {
   return acc;
 }, {} as Record<ProjectCategory, { label: string; description: string; maxParticipants: number; }>);
 
-// ===== UTILITÁRIOS =====
+// ===== UTILITÃRIOS =====
 
 export const getProjectCategoryInfo = (category: ProjectCategory) => {
   return PROJECT_CATEGORIES.find(c => c.value === category);

@@ -12,7 +12,7 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 
 export const useProjects = (initialFilters?: ProjectFilters) => {
-  const [projects, setProjects] = useState<Project[]>([]); // ✅ Array vazio, não undefined
+  const [projects, setProjects] = useState<Project[]>([]); // âœ… Array vazio, nÃ£o undefined
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -38,23 +38,23 @@ export const useProjects = (initialFilters?: ProjectFilters) => {
     const response = await api.get('/projects', { params: cleanParams });
     
     if (response.data.success) {
-      // ✅ Garantir que sempre seja um array
+      // âœ… Garantir que sempre seja um array
       const projectsData = response.data.data?.projects || response.data.data || [];
       setProjects(Array.isArray(projectsData) ? projectsData : []);
     }
   } catch (error: any) {
     console.error('Erro ao buscar projetos:', error);
     toast.error(error.response?.data?.message || 'Erro ao carregar projetos');
-    setProjects([]); // ✅ Sempre array vazio em caso de erro
+    setProjects([]); // âœ… Sempre array vazio em caso de erro
   } finally {
     setLoading(false);
   }
 }, [filters]);
 
   // ===== BUSCAR PROJETO POR ID =====
-  const getProject = async (id: string): Promise<Project | null> => {  // ✅ Corrigido para string (CUID)
+  const getProject = async (id: string): Promise<Project | null> => {  // âœ… Corrigido para string (CUID)
     try {
-      const response = await api.get(`/projects/${id}`);  // ✅ Removido /api/
+      const response = await api.get(`/projects/${id}`);  // âœ… Removido /api/
       
       if (response.data.success) {
         return response.data.data;;
@@ -75,16 +75,16 @@ const createProject = async (data: CreateProjectData): Promise<Project | null> =
     const response = await api.post('/projects', data);
     
     if (response.data.success) {
-      const newProject: Project = response.data.data; // ✅ Corrigido
+      const newProject: Project = response.data.data; // âœ… Corrigido
       
-      // ✅ Versão mais segura: só atualizar a lista se estivermos na primeira página
+      // âœ… VersÃ£o mais segura: sÃ³ atualizar a lista se estivermos na primeira pÃ¡gina
       if (pagination?.page === 1) {
         setProjects(prev => {
           const limit = pagination?.limit || 10;
           return [newProject, ...prev.slice(0, Math.max(0, limit - 1))];
         });
       } else {
-        // Se não estiver na primeira página, apenas refetch para garantir consistência
+        // Se nÃ£o estiver na primeira pÃ¡gina, apenas refetch para garantir consistÃªncia
         fetchProjects();
       }
       
@@ -107,7 +107,7 @@ const updateProject = async (id: string, data: UpdateProjectData): Promise<boole
     const response = await api.put(`/projects/${id}`, data);
     
     if (response.data.success) {
-      // Em vez de atualizar localmente, refaça a busca
+      // Em vez de atualizar localmente, refaÃ§a a busca
       await fetchProjects();
       
       toast.success('Projeto atualizado com sucesso!');
@@ -121,15 +121,15 @@ const updateProject = async (id: string, data: UpdateProjectData): Promise<boole
   }
 };
   // ===== EXCLUIR PROJETO =====
-  const deleteProject = async (id: string): Promise<boolean> => {  // ✅ Corrigido para string
+  const deleteProject = async (id: string): Promise<boolean> => {  // âœ… Corrigido para string
     try {
-      const response = await api.delete(`/projects/${id}`);  // ✅ Removido /api/
+      const response = await api.delete(`/projects/${id}`);  // âœ… Removido /api/
       
       if (response.data.success) {
         // Remover da lista
         setProjects(prev => prev.filter(p => p.id !== id));
         
-        toast.success('Projeto excluído com sucesso!');
+        toast.success('Projeto excluÃ­do com sucesso!');
         return true;
       }
       return false;
@@ -143,9 +143,9 @@ const updateProject = async (id: string, data: UpdateProjectData): Promise<boole
   };
 
   // ===== ENVIAR PROJETO =====
-  const submitProject = async (id: string): Promise<boolean> => {  // ✅ Corrigido para string
+  const submitProject = async (id: string): Promise<boolean> => {  // âœ… Corrigido para string
     try {
-      const response = await api.post(`/projects/${id}/submit`);  // ✅ Removido /api/
+      const response = await api.post(`/projects/${id}/submit`);  // âœ… Removido /api/
       
       if (response.data.success) {
         const updatedProject: Project = response.data.data;
@@ -155,7 +155,7 @@ const updateProject = async (id: string, data: UpdateProjectData): Promise<boole
           prev.map(p => p.id === id ? updatedProject : p)
         );
         
-        toast.success('Projeto enviado para avaliação!');
+        toast.success('Projeto enviado para avaliaÃ§Ã£o!');
         return true;
       }
       return false;
@@ -169,9 +169,9 @@ const updateProject = async (id: string, data: UpdateProjectData): Promise<boole
   };
 
   // ===== ATUALIZAR STATUS (ADMIN) =====
-  const updateProjectStatus = async (id: string, status: string): Promise<boolean> => {  // ✅ Corrigido para string
+  const updateProjectStatus = async (id: string, status: string): Promise<boolean> => {  // âœ… Corrigido para string
     try {
-      const response = await api.put(`/projects/${id}/status`, { status });  // ✅ Removido /api/
+      const response = await api.put(`/projects/${id}/status`, { status });  // âœ… Removido /api/
       
       if (response.data.success) {
         const updatedProject: Project = response.data.data;
@@ -203,7 +203,7 @@ const updateProject = async (id: string, data: UpdateProjectData): Promise<boole
     fetchProjects(updatedFilters);
   };
 
-  // ===== MUDAR PÁGINA =====
+  // ===== MUDAR PÃGINA =====
   const changePage = (newPage: number) => {
     const updatedFilters = { ...filters, page: newPage };
     setFilters(updatedFilters);
@@ -227,7 +227,7 @@ const updateProject = async (id: string, data: UpdateProjectData): Promise<boole
     pagination,
     filters,
     
-    // Ações
+    // AÃ§Ãµes
     createProject,
     getProject,
     updateProject,
@@ -240,7 +240,7 @@ const updateProject = async (id: string, data: UpdateProjectData): Promise<boole
   };
 };
 
-// ===== HOOK PARA ESTATÍSTICAS =====
+// ===== HOOK PARA ESTATÃSTICAS =====
 export const useProjectStats = () => {
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -251,11 +251,11 @@ export const useProjectStats = () => {
     const response = await api.get('/projects/stats');
     
     if (response.data.success) {
-      setStats(response.data.data); // ✅ Corrigido: remover .stats
+      setStats(response.data.data); // âœ… Corrigido: remover .stats
     }
   } catch (error: any) {
-    console.error('Erro ao buscar estatísticas:', error);
-    toast.error('Erro ao carregar estatísticas');
+    console.error('Erro ao buscar estatÃ­sticas:', error);
+    toast.error('Erro ao carregar estatÃ­sticas');
   } finally {
     setLoading(false);
   }
@@ -268,7 +268,7 @@ export const useProjectStats = () => {
   return { stats, loading, refetch: fetchStats };
 };
 
-// ===== HOOK PARA ÁREAS DO CONHECIMENTO =====
+// ===== HOOK PARA ÃREAS DO CONHECIMENTO =====
 export const useAreasConhecimento = (nivel?: number, parent?: string) => {
   const [areas, setAreas] = useState<AreaConhecimento[]>([]);
   const [loading, setLoading] = useState(false);
@@ -280,14 +280,14 @@ export const useAreasConhecimento = (nivel?: number, parent?: string) => {
       if (nivel) params.nivel = nivel;
       if (parent) params.parent = parent;
 
-      const response = await api.get('/projects/areas', { params });  // ✅ Corrigido para /projects/areas
+      const response = await api.get('/projects/areas', { params });  // âœ… Corrigido para /projects/areas
       
       if (response.data.success) {
         setAreas(response.data.data);
       }
     } catch (error: any) {
-      console.error('Erro ao buscar áreas do conhecimento:', error);
-      toast.error('Erro ao carregar áreas do conhecimento');
+      console.error('Erro ao buscar Ã¡reas do conhecimento:', error);
+      toast.error('Erro ao carregar Ã¡reas do conhecimento');
       setAreas([]);
     } finally {
       setLoading(false);

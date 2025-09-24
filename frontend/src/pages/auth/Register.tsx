@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowLeft, User, MapPin, GraduationCap, CheckCircle, UserPlus, ChevronRight, ChevronLeft } from "lucide-react";
 import api from '@/services/api';
-import toast from 'react-hot-toast';
+import { buscarEstados, buscarCidades, Estado, Cidade } from '@/utils/ibge';
 
 type FebicRole = 'AUTOR' | 'ORIENTADOR';
 
@@ -66,6 +66,12 @@ const Register = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Estados para IBGE
+  const [estados, setEstados] = useState<Estado[]>([]);
+  const [cidades, setCidades] = useState<Cidade[]>([]);
+  const [carregandoEstados, setCarregandoEstados] = useState(true);
+  const [carregandoCidades, setCarregandoCidades] = useState(false);
   
   const [formData, setFormData] = useState<FormData>({
     // Dados básicos
@@ -75,7 +81,7 @@ const Register = () => {
     confirmPassword: "",
     cpf: "",
     phone: "",
-    role: "",
+    role: "",    
     
     // Dados pessoais
     birthDate: "",
@@ -97,6 +103,45 @@ const Register = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Carregar estados quando componente monta
+  useEffect(() => {
+    const carregarEstados = async () => {
+      setCarregandoEstados(true);
+      const estadosData = await buscarEstados();
+      setEstados(estadosData);
+      setCarregandoEstados(false);
+    };
+    
+    carregarEstados();
+  }, []);
+
+  const handleEstadoChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const estadoId = e.target.value;
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      state: estadoId,
+      city: '' // Limpar cidade
+    }));
+    
+    if (estadoId) {
+      setCarregandoCidades(true);
+      const cidadesData = await buscarCidades(parseInt(estadoId));
+      setCidades(cidadesData);
+      setCarregandoCidades(false);
+    } else {
+      setCidades([]);
+    }
+    
+    setErrors(prev => ({ ...prev, state: undefined, city: undefined }));
+  };
+
+  // Função para quando cidade muda
+  const handleCidadeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData(prev => ({ ...prev, city: e.target.value }));
+    setErrors(prev => ({ ...prev, city: undefined }));
+  };
 
   // Formatação de campos
   const formatCPF = (value: string) => {
@@ -154,8 +199,8 @@ const Register = () => {
     if (!formData.gender) newErrors.gender = "Gênero é obrigatório";
     if (!formData.address.trim()) newErrors.address = "Endereço é obrigatório";
     if (!formData.neighborhood.trim()) newErrors.neighborhood = "Bairro é obrigatório";
-    if (!formData.city.trim()) newErrors.city = "Cidade é obrigatória";
-    if (!formData.state.trim()) newErrors.state = "Estado é obrigatório";
+    if (!formData.state) newErrors.state = "Estado é obrigatório";
+    if (!formData.city) newErrors.city = "Cidade é obrigatória";
     if (!formData.zipCode.trim()) newErrors.zipCode = "CEP é obrigatório";
     
     setErrors(newErrors);
@@ -192,7 +237,7 @@ const Register = () => {
     if (isValid) {
       setCurrentStep(prev => prev + 1);
     } else {
-      toast.error('Preencha todos os campos obrigatórios antes de continuar');
+      console.log("ERROR:", 'Preencha todos os campos obrigatórios antes de continuar');
     }
   };
 
@@ -232,7 +277,7 @@ const Register = () => {
       
       if (response.data.success) {
         setShowSuccess(true);
-        toast.success('Cadastro realizado com sucesso!');
+        console.log("SUCCESS:", 'Cadastro realizado com sucesso!');
         
         setTimeout(() => {
           navigate('/auth/login');
@@ -241,7 +286,7 @@ const Register = () => {
     } catch (error: any) {
       console.error('Erro no cadastro:', error);
       const message = error.response?.data?.message || 'Erro ao criar conta. Tente novamente.';
-      toast.error(message);
+      console.log("ERROR:", message);
     } finally {
       setLoading(false);
     }
@@ -364,9 +409,76 @@ const Register = () => {
         {renderFormField("zipCode", "CEP", "text", "12345-678")}
       </div>
       
+      {/* Estado e Cidade SIMPLES com IBGE */}
       <div className="grid grid-cols-2 gap-4">
-        {renderFormField("city", "Cidade", "text", "Cidade Exemplo")}
-        {renderFormField("state", "Estado", "text", "SP", true, undefined, 2)}
+        {/* Estado */}
+        <div className="space-y-2">
+          <label htmlFor="state" className="block text-sm font-medium text-gray-700">
+            Estado <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="state"
+            name="state"
+            value={formData.state}
+            onChange={handleEstadoChange}
+            disabled={carregandoEstados}
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm hover:bg-white/70 focus:bg-white ${
+              errors.state ? "border-red-500" : "border-gray-300"
+            }`}
+          >
+            <option value="">
+              {carregandoEstados ? "Carregando..." : "Selecione o estado"}
+            </option>
+            {estados.map((estado) => (
+              <option key={estado.id} value={estado.id}>
+                {estado.nome}
+              </option>
+            ))}
+          </select>
+          {errors.state && (
+            <p className="text-sm text-red-500 flex items-center gap-1">
+              <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+              {errors.state}
+            </p>
+          )}
+        </div>
+
+        {/* Cidade */}
+        <div className="space-y-2">
+          <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+            Cidade <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="city"
+            name="city"
+            value={formData.city}
+            onChange={handleCidadeChange}
+            disabled={!formData.state || carregandoCidades}
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm hover:bg-white/70 focus:bg-white disabled:opacity-50 ${
+              errors.city ? "border-red-500" : "border-gray-300"
+            }`}
+          >
+            <option value="">
+              {!formData.state 
+                ? "Primeiro selecione o estado"
+                : carregandoCidades 
+                  ? "Carregando..."
+                  : "Selecione a cidade"
+              }
+            </option>
+            {cidades.map((cidade) => (
+              <option key={cidade.id} value={cidade.nome}>
+                {cidade.nome}
+              </option>
+            ))}
+          </select>
+          {errors.city && (
+            <p className="text-sm text-red-500 flex items-center gap-1">
+              <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+              {errors.city}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

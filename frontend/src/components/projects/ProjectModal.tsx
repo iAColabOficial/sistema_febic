@@ -8,8 +8,8 @@ interface ProjectDetailModalProps {
   project: Project;
   onClose: () => void;
   onEdit?: (project: Project) => void;
-  onSubmit?: (id: string) => void;
-  onUpdateStatus?: (id: string, status: string) => void;
+  onSubmit?: (id: string) => void; // âœ… CORRIGIDO: string em vez de number
+  onUpdateStatus?: (id: string, status: string) => void; // âœ… CORRIGIDO: string em vez de number
 }
 
 const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
@@ -21,17 +21,20 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 }) => {
   const { user } = useAuth();
   
-  console.log('🔍 DEBUG - Projeto recebido no modal:', project);
-  console.log('🔍 DEBUG - Chaves do projeto:', project ? Object.keys(project) : 'project é null/undefined');
-  console.log('🔍 DEBUG - Owner do projeto:', project?.owner);
-  console.log('🔍 DEBUG - User atual:', user);
+  // âœ… CORRIGIDO: Debug para ver estrutura do projeto
+  console.log('ðŸ” DEBUG - Projeto recebido no modal:', project);
+  console.log('ðŸ” DEBUG - Chaves do projeto:', project ? Object.keys(project) : 'project Ã© null/undefined');
+  console.log('ðŸ” DEBUG - Owner do projeto:', project?.owner);
+  console.log('ðŸ” DEBUG - User atual:', user);
 
+  // âœ… CORRIGIDO: owner em vez de author, ownerId em vez de authorId
   const isAuthor = user?.id === project?.ownerId;
-  const isAdmin = user?.role === 'ADMINISTRADOR';
+  const isAdmin = user?.role === 'ADMINISTRADOR'; // âœ… CORRIGIDO: ADMINISTRADOR em vez de ADMIN
 
   const categoryLabel = PROJECT_CATEGORIES.find(cat => cat.value === project?.category)?.label || project?.category;
   const statusConfig = PROJECT_STATUS.find(s => s.value === project?.status);
 
+  // âœ… CORRIGIDO: status do schema Prisma
   const canEdit = isAuthor && project?.status === 'RASCUNHO';
   const canSubmit = isAuthor && project?.status === 'RASCUNHO';
   const canUpdateStatus = isAdmin && project?.status === 'SUBMETIDO';
@@ -42,7 +45,9 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     }
   };
 
+  // âœ… ADICIONADO: ProteÃ§Ã£o se project for null/undefined
   if (!project) {
+    console.error('âŒ Projeto nÃ£o fornecido para o modal');
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl p-6 max-w-md w-full">
@@ -51,7 +56,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               Erro ao carregar projeto
             </h2>
             <p className="text-gray-600 mb-4">
-              Os dados do projeto não foram carregados corretamente.
+              Os dados do projeto nÃ£o foram carregados corretamente.
             </p>
             <button
               onClick={onClose}
@@ -72,6 +77,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     >
       <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
+          {/* Header */}
           <div className="flex justify-between items-start mb-6">
             <div className="flex-1 pr-4">
               <h1 className="text-2xl font-bold text-gray-900 mb-3">
@@ -80,11 +86,12 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               <div className="flex items-center gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4" />
+                  {/* âœ… CORRIGIDO: owner em vez de author, com fallback de seguranÃ§a */}
                   <span className="font-medium">
-                    {project.owner?.name || 'Nome não disponível'}
+                    {project.owner?.name || 'Nome nÃ£o disponÃ­vel'}
                   </span>
                   <span className="text-gray-400">
-                    ({project.owner?.email || 'Email não disponível'})
+                    ({project.owner?.email || 'Email nÃ£o disponÃ­vel'})
                   </span>
                 </div>
               </div>
@@ -112,6 +119,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             </div>
           </div>
 
+          {/* InformaÃ§Ãµes bÃ¡sicas */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="space-y-4">
               <div>
@@ -125,10 +133,10 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               <div>
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4" />
-                  Data de Criação
+                  Data de CriaÃ§Ã£o
                 </div>
                 <p className="text-gray-900">
-                  {format(new Date(project.createdAt), 'dd/MM/yyyy \'às\' HH:mm')}
+                  {format(new Date(project.createdAt), 'dd/MM/yyyy \'Ã s\' HH:mm')}
                 </p>
               </div>
             </div>
@@ -137,10 +145,10 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               <div>
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Clock className="w-4 h-4" />
-                  Última Atualização
+                  Ãšltima AtualizaÃ§Ã£o
                 </div>
                 <p className="text-gray-900">
-                  {format(new Date(project.updatedAt), 'dd/MM/yyyy \'às\' HH:mm')}
+                  {format(new Date(project.updatedAt), 'dd/MM/yyyy \'Ã s\' HH:mm')}
                 </p>
               </div>
 
@@ -154,33 +162,37 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             </div>
           </div>
 
+          {/* âœ… ADICIONADO: InformaÃ§Ãµes adicionais se disponÃ­veis */}
           {(project.institution || project.areaConhecimento) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 p-4 bg-gray-50 rounded-lg">
               {project.institution && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-1">Instituição</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-1">InstituiÃ§Ã£o</h4>
                   <p className="text-gray-900">{project.institution}</p>
                 </div>
               )}
               
               {project.areaConhecimento && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-1">Área de Conhecimento</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-1">Ãrea de Conhecimento</h4>
                   <p className="text-gray-900">{project.areaConhecimento.nome}</p>
                 </div>
               )}
             </div>
           )}
 
+          {/* Resumo */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Resumo do Projeto</h3>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {project.summary || 'Resumo não disponível'}
+                {/* âœ… CORRIGIDO: summary em vez de abstract */}
+                {project.summary || 'Resumo nÃ£o disponÃ­vel'}
               </p>
             </div>
           </div>
 
+          {/* âœ… ADICIONADO: SeÃ§Ãµes adicionais se disponÃ­veis */}
           {project.objective && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Objetivo</h3>
@@ -203,6 +215,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             </div>
           )}
 
+          {/* âœ… ADICIONADO: Palavras-chave se disponÃ­veis */}
           {project.keywords && project.keywords.length > 0 && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Palavras-chave</h3>
@@ -219,6 +232,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             </div>
           )}
 
+          {/* AÃ§Ãµes */}
           <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
             {canEdit && onEdit && (
               <button
@@ -236,7 +250,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
               >
                 <CheckCircle className="w-4 h-4" />
-                Enviar para Avaliação
+                Enviar para AvaliaÃ§Ã£o
               </button>
             )}
 

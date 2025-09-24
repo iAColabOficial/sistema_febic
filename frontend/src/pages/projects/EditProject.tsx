@@ -8,7 +8,7 @@ import {
   FileText
 } from 'lucide-react';
 import api from '@/services/api';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 import { Project } from '@/types/Project';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -36,7 +36,7 @@ const EditProject: React.FC = () => {
   useEffect(() => {
     const fetchProject = async () => {
       if (!id) {
-        toast.error('ID do projeto não encontrado');
+        console.log("ERROR:", 'ID do projeto não encontrado');
         navigate('/projects');
         return;
       }
@@ -50,7 +50,7 @@ const EditProject: React.FC = () => {
           
           // Verificar se o usuário pode editar este projeto
           if (projectData.ownerId !== user?.id) {
-            toast.error('Você não tem permissão para editar este projeto');
+            console.log("ERROR:", 'Você não tem permissão para editar este projeto');
             navigate('/projects');
             return;
           }
@@ -67,12 +67,12 @@ const EditProject: React.FC = () => {
             keywords: projectData.keywords || []
           });
         } else {
-          toast.error('Erro ao carregar projeto');
+          console.log("ERROR:", 'Erro ao carregar projeto');
           navigate('/projects');
         }
       } catch (error: any) {
         console.error('Erro ao carregar projeto:', error);
-        toast.error('Erro ao carregar projeto');
+        console.log("ERROR:", 'Erro ao carregar projeto');
         navigate('/projects');
       } finally {
         setLoading(false);
@@ -93,14 +93,14 @@ const EditProject: React.FC = () => {
       const response = await api.put(`/projects/${project.id}`, formData);
       
       if (response.data.success) {
-        toast.success('Projeto atualizado com sucesso!');
+        console.log("SUCCESS:", 'Projeto atualizado com sucesso!');
         navigate('/projects');
       } else {
-        toast.error(response.data.message || 'Erro ao atualizar projeto');
+        console.log("ERROR:", response.data.message || 'Erro ao atualizar projeto');
       }
     } catch (error: any) {
       console.error('Erro ao atualizar projeto:', error);
-      toast.error('Erro ao atualizar projeto');
+      console.log("ERROR:", 'Erro ao atualizar projeto');
     } finally {
       setUpdating(false);
     }

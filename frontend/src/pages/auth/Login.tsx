@@ -10,17 +10,24 @@ const Login: React.FC = () => {
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showError, setShowError] = useState(false);
   
   const { login, loading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setShowError(false);
     
     if (!formData.email || !formData.password) {
+      setShowError(true);
       return;
     }
 
-    await login(formData.email, formData.password);
+    const success = await login(formData.email, formData.password);
+    
+    if (!success) {
+      setShowError(true);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,11 +35,11 @@ const Login: React.FC = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    setShowError(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 flex items-center justify-center p-4">
-      {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
@@ -40,10 +47,8 @@ const Login: React.FC = () => {
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Floating Card */}
         <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20 transition-all duration-500 hover:shadow-3xl">
           
-          {/* Logo Section */}
           <div className="text-center mb-8">
             <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center mb-4 shadow-lg">
               <LogIn className="w-8 h-8 text-white" />
@@ -56,9 +61,24 @@ const Login: React.FC = () => {
             </p>
           </div>
 
-          {/* Form */}
+          {/* ERRO COM CSS INLINE FORÇADO */}
+          {showError && (
+            <div style={{
+              backgroundColor: '#fee2e2',
+              border: '1px solid #fca5a5',
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              color: '#b91c1c'
+            }}>
+              <span style={{ marginRight: '12px' }}>⚠️</span>
+              <span style={{ fontWeight: '500' }}>Email ou senha incorretos</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email
@@ -80,7 +100,6 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            {/* Password Field */}
             <div className="space-y-2">
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Senha
@@ -113,7 +132,6 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            {/* Remember Me */}
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -128,13 +146,12 @@ const Login: React.FC = () => {
               </div>
               <button
                 type="button"
-                className="text-sm text-primary-600 hover:text-primary-500 transition-colors"
+                className="text-sm text-primary-600 hover:text-primary-500 transition-colors font-medium"
               >
                 Esqueceu a senha?
               </button>
             </div>
 
-            {/* Submit Button */}
             <Button
               type="submit"
               disabled={loading}
@@ -154,7 +171,6 @@ const Login: React.FC = () => {
             </Button>
           </form>
 
-          {/* Divider */}
           <div className="mt-8 mb-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -166,7 +182,6 @@ const Login: React.FC = () => {
             </div>
           </div>
 
-          {/* Register Link */}
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Não tem uma conta?{' '}
@@ -179,7 +194,6 @@ const Login: React.FC = () => {
             </p>
           </div>
 
-          {/* Back to Home */}
           <div className="mt-6 text-center">
             <Link
               to="/"
@@ -191,14 +205,12 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Access Info */}
         <div className="mt-6 text-center">
           <p className="text-white/80 text-sm">
             Use suas credenciais de participante para acessar o sistema
           </p>
         </div>
 
-        {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-white/60 text-xs">
             FEBIC - Feira Brasileira de Iniciação Científica © 2025

@@ -12,12 +12,14 @@ import {
   FileText,
   Users,
   MapPin,
-  AlertCircle
+  AlertCircle,
+  UserCheck
 } from 'lucide-react';
-import api from '@/services/api';
-import toast from 'react-hot-toast';
-import { CreateProjectData, ProjectMember, ProjectOrientador, ProjectCategory } from '@/types/Project';
-import ValidatedField, { validationRules } from '@/components/projects/ValidatedField';
+import api from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { CreateProjectData, ProjectMember, ProjectOrientador, ProjectCategory } from '../../types/Project';
+import ValidatedField, { validationRules } from '../../components/projects/ValidatedField';
+import { buscarEstados, buscarCidades, Estado, Cidade } from '../../utils/ibge';
 
 interface AreaConhecimento {
   id: string;
@@ -26,7 +28,6 @@ interface AreaConhecimento {
   nivel: number;
 }
 
-// Limites de integrantes por categoria
 const CATEGORY_MEMBER_LIMITS: Record<ProjectCategory, number> = {
   I: 6,
   II: 5,
@@ -42,13 +43,14 @@ const CATEGORY_MEMBER_LIMITS: Record<ProjectCategory, number> = {
 
 const CATEGORIES = [
   { value: 'I', label: 'Categoria I - Educação Infantil (Pré I e Pré II)' },
-  { value: 'II', label: 'Categoria II - Ensino Fundamental (1º ao 6º ano)' },
-  { value: 'III', label: 'Categoria III - Ensino Fundamental (7º ao 9º ano)' },
-  { value: 'IV', label: 'Categoria IV - Ensino Técnico Subsequente' },
-  { value: 'V', label: 'Categoria V - Educação de Jovens e Adultos' },
-  { value: 'VI', label: 'Categoria VI - Ensino Médio/Profissionalizante' },
-  { value: 'VII', label: 'Categoria VII - Ensino Superior' },
-  { value: 'VIII', label: 'Categoria VIII - Pós-graduação' },
+  { value: 'II', label: 'Categoria II - Ensino Fundamental (1º ao 3º ano)' },
+  { value: 'III', label: 'Categoria III - Ensino Fundamental (4º ao 6º ano)' },
+  { value: 'IV', label: 'Categoria IV - Ensino Fundamental (7º ao 9º ano)' },
+  { value: 'V', label: 'Categoria V - Ensino Médio' },
+  { value: 'VI', label: 'Categoria VI - Ensino Técnico' },
+  { value: 'VII', label: 'Categoria VII - EJA - Educação de Jovens e Adultos' },
+  { value: 'VIII', label: 'Categoria VIII - Ensino Superior' },
+  { value: 'IX', label: 'Categoria IX - Pós-graduação' },
   { value: 'RELATO', label: 'Relato de Experiência Científico-Pedagógica' }
 ];
 
@@ -80,6 +82,15 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [searchingCPF, setSearchingCPF] = useState(false);
+  
+  // Buscar dados do usuário autenticado
+  const { user } = useAuth();
+
+  // Estados para IBGE
+  const [estadosIBGE, setEstadosIBGE] = useState<Estado[]>([]);
+  const [cidadesIBGE, setCidadesIBGE] = useState<Cidade[]>([]);
+  const [carregandoEstadosIBGE, setCarregandoEstadosIBGE] = useState(true);
+  const [carregandoCidadesIBGE, setCarregandoCidadesIBGE] = useState(false);
 
   // Estados para áreas hierárquicas
   const [areasNivel1, setAreasNivel1] = useState<AreaConhecimento[]>([]);
@@ -109,14 +120,148 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
     isIndigenous: false,
     hasDisability: false,
     socialVulnerability: false,
-    members: [],
+    members: [], // Será pré-populado com o usuário logado
     orientadores: [],
     paymentRequired: true,
     isPaymentExempt: false,
     exemptionReason: ''
   });
 
-  // 1. Carregar áreas principais na inicialização
+  // Pré-popular com o usuário logado baseado no role
+// Pré-popular com o usuário logado baseado no role
+useEffect(() => {
+  if (user && user.role === 'AUTOR' && formData.members.length === 0) {
+    const userAsMember: ProjectMember = {
+      userId: user.id,
+      name: user.name || '',
+      email: user.email || '',
+      cpf: user.cpf || '',
+      rg: '',
+      birthDate: user.birthDate ? user.birthDate.split('T')[0] : '',
+      gender: user.gender || 'Prefiro não informar',
+      phone: user.phone || '',
+      address: user.address || '',
+      city: user.city || '',
+      state: user.state || '',
+      zipCode: user.zipCode || '',
+      schoolLevel: getSchoolLevelFromFormation(user.formation) || 'Ensino Superior',
+      schoolYear: '',
+      institution: user.institution || '',
+      isIndigenous: false,
+      hasDisability: false,
+      isRural: false
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      members: [userAsMember],
+      institution: user.institution || prev.institution,
+      institutionCity: user.city || prev.institutionCity,
+      institutionState: user.state || prev.institutionState
+    }));
+  } else if (user && user.role === 'ORIENTADOR') {
+    // Para orientadores, apenas pré-popular dados institucionais
+    setFormData(prev => ({
+      ...prev,
+      institution: user.institution || prev.institution,
+      institutionCity: user.city || prev.institutionCity,
+      institutionState: user.state || prev.institutionState
+    }));
+  }
+}, [user, formData.members.length]);
+
+// Pré-popular orientador se o usuário for ORIENTADOR
+useEffect(() => {
+  if (user && user.role === 'ORIENTADOR' && formData.orientadores.length === 0) {
+    const userAsOrientador: ProjectOrientador = {
+      userId: user.id,
+      name: user.name || '',
+      email: user.email || '',
+      cpf: user.cpf || '',
+      phone: user.phone || '',
+      formation: user.formation || 'Não informado',
+      area: user.formation || 'Área não especificada',
+      institution: user.institution || '',
+      position: user.position || 'Orientador',
+      city: user.city || '',
+      state: user.state || '',
+      yearsExperience: 0,
+      lattesUrl: ''
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      orientadores: [userAsOrientador]
+    }));
+  }
+}, [user, formData.orientadores.length]);
+
+  // Helper function para determinar nível escolar
+  const getSchoolLevelFromFormation = (formation?: string): string => {
+    if (!formation) return 'Ensino Superior';
+    
+    const formationLower = formation.toLowerCase();
+    
+    if (formationLower.includes('doutorado') || formationLower.includes('phd')) {
+      return 'Pós-graduação';
+    }
+    
+    if (formationLower.includes('mestrado') || formationLower.includes('master')) {
+      return 'Pós-graduação';
+    }
+    
+    if (formationLower.includes('especialização') || formationLower.includes('pós-graduação')) {
+      return 'Pós-graduação';
+    }
+    
+    if (formationLower.includes('superior') || formationLower.includes('graduação') || formationLower.includes('bacharel')) {
+      return 'Ensino Superior';
+    }
+    
+    if (formationLower.includes('técnico')) {
+      return 'Ensino Técnico';
+    }
+    
+    if (formationLower.includes('médio')) {
+      return 'Ensino Médio';
+    }
+    
+    return 'Ensino Superior';
+  };
+
+  // Carregar estados quando componente monta
+  useEffect(() => {
+    const carregarEstados = async () => {
+      setCarregandoEstadosIBGE(true);
+      const estadosData = await buscarEstados();
+      setEstadosIBGE(estadosData);
+      setCarregandoEstadosIBGE(false);
+    };
+    
+    carregarEstados();
+  }, []);
+
+  // Handler para mudança de estado da instituição
+  const handleEstadoInstituicaoChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const estadoId = e.target.value;
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      institutionState: estadoId,
+      institutionCity: ''
+    }));
+    
+    if (estadoId) {
+      setCarregandoCidadesIBGE(true);
+      const cidadesData = await buscarCidades(parseInt(estadoId));
+      setCidadesIBGE(cidadesData);
+      setCarregandoCidadesIBGE(false);
+    } else {
+      setCidadesIBGE([]);
+    }
+  };
+
+  // Carregar áreas principais
   useEffect(() => {
     const fetchAreasNivel1 = async () => {
       try {
@@ -131,7 +276,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
     fetchAreasNivel1();
   }, []);
 
-  // 2. Carregar subáreas quando área nível 1 for selecionada
+  // Carregar subáreas nível 2
   useEffect(() => {
     const fetchAreasNivel2 = async () => {
       if (selectedAreaNivel1) {
@@ -154,7 +299,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
     fetchAreasNivel2();
   }, [selectedAreaNivel1]);
 
-  // 3. Carregar subáreas nível 3 quando área nível 2 for selecionada
+  // Carregar subáreas nível 3
   useEffect(() => {
     const fetchAreasNivel3 = async () => {
       if (selectedAreaNivel2) {
@@ -199,13 +344,13 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
 
   const addMember = () => {
     if (!formData.category) {
-      toast.error('Selecione uma categoria primeiro');
+      console.log("ERROR:", 'Selecione uma categoria primeiro');
       return;
     }
 
     const maxMembers = CATEGORY_MEMBER_LIMITS[formData.category as ProjectCategory];
     if (formData.members.length >= maxMembers) {
-      toast.error(`Categoria ${formData.category} permite no máximo ${maxMembers} integrantes`);
+      console.log("ERROR:", `Categoria ${formData.category} permite no máximo ${maxMembers} integrantes`);
       return;
     }
 
@@ -236,17 +381,47 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
   };
 
   const removeMember = (index: number) => {
+    // Não permitir remover o primeiro membro se for AUTOR
+    if (user?.role === 'AUTOR' && index === 0) {
+      console.log("ERROR:", 'Você não pode se remover como autor do projeto');
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       members: prev.members.filter((_, i) => i !== index)
     }));
   };
 
+  const updateMember = (index: number, field: keyof ProjectMember, value: any) => {
+    // Não permitir editar campos críticos do primeiro membro se for AUTOR
+    if (user?.role === 'AUTOR' && index === 0 && ['name', 'email', 'cpf'].includes(field)) {
+      console.log("ERROR:", 'Não é possível alterar dados básicos do autor principal');
+      return;
+    }
+
+    const updatedMembers = [...formData.members];
+    updatedMembers[index] = { ...updatedMembers[index], [field]: value };
+    setFormData(prev => ({ ...prev, members: updatedMembers }));
+  };
+
   const searchMemberByCPF = async (index: number, cpf: string) => {
+    // Não permitir busca por CPF para o primeiro membro se for AUTOR
+    if (user?.role === 'AUTOR' && index === 0) {
+      console.log("ERROR:", 'Você já está cadastrado como autor principal');
+      return;
+    }
+
     try {
       const userData = await searchUserByCPF(cpf);
       
       if (userData) {
+        // Verificar se não é o usuário logado (para qualquer role)
+        if (userData.id === user?.id) {
+          console.log("ERROR:", user?.role === 'AUTOR' ? 'Você já está cadastrado como autor principal' : 'Você não pode se adicionar como integrante');
+          return;
+        }
+
         const updatedMembers = [...formData.members];
         updatedMembers[index] = {
           ...updatedMembers[index],
@@ -265,21 +440,18 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         };
 
         setFormData(prev => ({ ...prev, members: updatedMembers }));
-        toast.success('Dados preenchidos automaticamente');
+        console.log("SUCCESS:", 'Dados preenchidos automaticamente');
       } else {
-        toast('CPF não encontrado. Preencha os dados manualmente.', {
-          icon: 'ℹ️',
-          style: { background: '#3b82f6', color: 'white' }
-        });
+        alert('CPF não encontrado. Preencha os dados manualmente.');
       }
     } catch (error: any) {
-      toast.error(error.message);
+      console.log("ERROR:", error.message);
     }
   };
 
   const addOrientador = () => {
     if (formData.orientadores.length >= 2) {
-      toast.error('Máximo de 2 orientadores permitido (1 orientador + 1 coorientador)');
+      console.log("ERROR:", 'Máximo de 2 orientadores permitido (1 orientador + 1 coorientador)');
       return;
     }
 
@@ -311,11 +483,39 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
     }));
   };
 
+  const updateOrientador = (index: number, field: keyof ProjectOrientador, value: any) => {
+    // Validação para não permitir que membros sejam orientadores
+    if (field === 'email' || field === 'cpf') {
+      const isUserMember = formData.members.some(member => 
+        member.email === value || member.cpf === value
+      );
+      
+      if (isUserMember) {
+        console.log("ERROR:", 'Integrantes do projeto não podem ser orientadores');
+        return;
+      }
+    }
+
+    const updatedOrientadores = [...formData.orientadores];
+    updatedOrientadores[index] = { ...updatedOrientadores[index], [field]: value };
+    setFormData(prev => ({ ...prev, orientadores: updatedOrientadores }));
+  };
+
   const searchOrientadorByCPF = async (index: number, cpf: string) => {
     try {
       const userData = await searchUserByCPF(cpf);
       
       if (userData) {
+        // Validar se não é membro do projeto
+        const isProjectMember = formData.members.some(member => 
+          member.email === userData.email || member.cpf === userData.cpf
+        );
+
+        if (isProjectMember) {
+          console.log("ERROR:", 'Integrantes do projeto não podem ser orientadores');
+          return;
+        }
+
         const updatedOrientadores = [...formData.orientadores];
         updatedOrientadores[index] = {
           ...updatedOrientadores[index],
@@ -332,28 +532,13 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         };
 
         setFormData(prev => ({ ...prev, orientadores: updatedOrientadores }));
-        toast.success('Dados preenchidos automaticamente');
+        console.log("SUCCESS:", 'Dados preenchidos automaticamente');
       } else {
-        toast('CPF não encontrado. Preencha os dados manualmente.', {
-          icon: 'ℹ️',
-          style: { background: '#3b82f6', color: 'white' }
-        });
+        alert('CPF não encontrado. Preencha os dados manualmente.');
       }
     } catch (error: any) {
-      toast.error(error.message);
+      console.log("ERROR:", error.message);
     }
-  };
-
-  const updateMember = (index: number, field: keyof ProjectMember, value: any) => {
-    const updatedMembers = [...formData.members];
-    updatedMembers[index] = { ...updatedMembers[index], [field]: value };
-    setFormData(prev => ({ ...prev, members: updatedMembers }));
-  };
-
-  const updateOrientador = (index: number, field: keyof ProjectOrientador, value: any) => {
-    const updatedOrientadores = [...formData.orientadores];
-    updatedOrientadores[index] = { ...updatedOrientadores[index], [field]: value };
-    setFormData(prev => ({ ...prev, orientadores: updatedOrientadores }));
   };
 
   const addKeyword = (keyword: string) => {
@@ -373,7 +558,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
   };
 
   const validateStep = (step: number): boolean => {
-    // A validação básica ainda existe, mas agora é mais visual através dos ValidatedFields
     switch (step) {
       case 1:
         if (!formData.title.trim() || formData.title.length < 10) return false;
@@ -386,39 +570,71 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         return true;
 
       case 2:
-        if (formData.members.length === 0) return false;
-        return formData.members.every(member => 
-          member.name.trim().length >= 2 &&
-          member.birthDate &&
-          member.gender &&
-          member.city.trim().length >= 2 &&
-          member.state.trim().length === 2 &&
-          member.schoolLevel &&
-          member.institution.trim().length >= 2
-        );
+        // Para AUTOR: deve ter pelo menos ele mesmo como membro
+        if (user?.role === 'AUTOR') {
+          if (formData.members.length === 0) return false;
+          return formData.members.every(member => 
+            member.name.trim().length >= 2 &&
+            member.birthDate &&
+            member.gender &&
+            member.city.trim().length >= 2 &&
+            member.state.trim().length >= 2 &&
+            member.schoolLevel &&
+            member.institution.trim().length >= 2
+          );
+        }
+        // Para ORIENTADOR: pode não ter membros (serão adicionados)
+        if (user?.role === 'ORIENTADOR') {
+          // Se tem membros, validar que estão preenchidos corretamente
+          if (formData.members.length > 0) {
+            return formData.members.every(member => 
+              member.name.trim().length >= 2 &&
+              member.birthDate &&
+              member.gender &&
+              member.city.trim().length >= 2 &&
+              member.state.trim().length >= 2 &&
+              member.schoolLevel &&
+              member.institution.trim().length >= 2
+            );
+          }
+          return true; // Orientador pode prosseguir sem membros
+        }
+        return true;
 
       case 3:
-        if (formData.orientadores.length === 0) return false;
-        return formData.orientadores.every(orientador =>
-          orientador.name.trim().length >= 2 &&
-          orientador.email.trim() &&
-          orientador.formation.trim().length >= 5 &&
-          orientador.area.trim().length >= 3 &&
-          orientador.institution.trim().length >= 2
-        );
+  // Se o usuário é ORIENTADOR, pular esta validação (já tem orientador automático)
+  if (user?.role === 'ORIENTADOR') {
+    return true;
+  }
+  
+  // Para outros roles, validar orientadores normalmente
+  if (formData.orientadores.length === 0) return false;
+  return formData.orientadores.every(orientador =>
+    orientador.name.trim().length >= 2 &&
+    orientador.email.trim() &&
+    orientador.formation.trim().length >= 5 &&
+    orientador.area.trim().length >= 3 &&
+    orientador.institution.trim().length >= 2
+  );
 
-      default:
-        return true;
+default:
+  return true;
     }
   };
 
   const nextStep = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 3));
-    } else {
-      toast.error('Por favor, preencha todos os campos obrigatórios corretamente');
+  if (validateStep(currentStep)) {
+    // Se está no step 2 e o usuário é ORIENTADOR, pular direto para submit
+    if (currentStep === 2 && user?.role === 'ORIENTADOR') {
+      handleSubmit(); // Finalizar direto
+      return;
     }
-  };
+    
+    setCurrentStep(prev => Math.min(prev + 1, 3));
+  } else {
+    console.log("ERROR:", 'Por favor, preencha todos os campos obrigatórios corretamente');
+  }
+};
 
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -426,16 +642,16 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
 
   const handleSubmit = async () => {
     if (!validateStep(3)) {
-      toast.error('Por favor, preencha todos os campos obrigatórios corretamente');
+      console.log("ERROR:", 'Por favor, preencha todos os campos obrigatórios corretamente');
       return;
     }
 
     setLoading(true);
     try {
       await onSubmit(formData);
-      toast.success('Projeto criado com sucesso!');
+      console.log("SUCCESS:", 'Projeto criado com sucesso!');
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao criar projeto');
+      console.log("ERROR:", error.message || 'Erro ao criar projeto');
     } finally {
       setLoading(false);
     }
@@ -449,7 +665,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         <h3 className="text-lg font-semibold">Dados do Projeto</h3>
       </div>
 
-      {/* Título com validação */}
       <ValidatedField
         label="Título do Projeto"
         required
@@ -460,7 +675,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         placeholder="Digite o título do projeto"
       />
 
-      {/* Resumo com validação */}
       <ValidatedField
         label="Resumo"
         required
@@ -473,7 +687,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         placeholder="Resumo do projeto"
       />
 
-      {/* Objetivo com validação */}
       <ValidatedField
         label="Objetivo"
         required
@@ -486,7 +699,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         placeholder="Objetivos do projeto"
       />
 
-      {/* Metodologia com validação */}
       <ValidatedField
         label="Metodologia"
         required
@@ -499,7 +711,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         placeholder="Metodologia utilizada"
       />
 
-      {/* Categoria e Área Hierárquica */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ValidatedField
           label="Categoria"
@@ -514,7 +725,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">Área de Conhecimento *</label>
           
-          {/* Grande Área (Nível 1) */}
           <div className="space-y-2">
             <label className="block text-xs font-medium text-gray-600">Grande Área</label>
             <select
@@ -531,7 +741,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
             </select>
           </div>
 
-          {/* Área (Nível 2) */}
           {areasNivel2.length > 0 && (
             <div className="space-y-2">
               <label className="block text-xs font-medium text-gray-600">Área</label>
@@ -550,7 +759,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
             </div>
           )}
 
-          {/* Subárea (Nível 3) */}
           {areasNivel3.length > 0 && (
             <div className="space-y-2">
               <label className="block text-xs font-medium text-gray-600">Subárea</label>
@@ -580,7 +788,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         </div>
       )}
 
-      {/* Instituição com validação */}
+      {/* Instituição com IBGE */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <ValidatedField
           label="Instituição"
@@ -592,23 +800,48 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
           placeholder="Nome da instituição"
         />
 
-        <ValidatedField
-          label="Cidade"
-          value={formData.institutionCity}
-          onChange={(e) => setFormData(prev => ({ ...prev, institutionCity: e.target.value }))}
-          validationRules={validationRules.city}
-          maxLength={100}
-          placeholder="Cidade"
-        />
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Estado</label>
+          <select
+            value={formData.institutionState}
+            onChange={handleEstadoInstituicaoChange}
+            disabled={carregandoEstadosIBGE}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          >
+            <option value="">
+              {carregandoEstadosIBGE ? "Carregando..." : "Selecione o estado"}
+            </option>
+            {estadosIBGE.map((estado) => (
+              <option key={estado.id} value={estado.id}>
+                {estado.nome}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <ValidatedField
-          label="Estado"
-          value={formData.institutionState}
-          onChange={(e) => setFormData(prev => ({ ...prev, institutionState: e.target.value.toUpperCase() }))}
-          validationRules={validationRules.state}
-          maxLength={2}
-          placeholder="UF"
-        />
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Cidade</label>
+          <select
+            value={formData.institutionCity}
+            onChange={(e) => setFormData(prev => ({ ...prev, institutionCity: e.target.value }))}
+            disabled={!formData.institutionState || carregandoCidadesIBGE}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          >
+            <option value="">
+              {!formData.institutionState 
+                ? "Primeiro selecione o estado"
+                : carregandoCidadesIBGE 
+                  ? "Carregando..."
+                  : "Selecione a cidade"
+              }
+            </option>
+            {cidadesIBGE.map((cidade) => (
+              <option key={cidade.id} value={cidade.nome}>
+                {cidade.nome}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Características da escola/projeto */}
@@ -683,7 +916,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
     </div>
   );
 
-  // Renderizar etapa 2 - Integrantes
+  // Renderizar etapa 2 - Integrantes (pré-populado com usuário logado)
   const renderStep2 = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -701,6 +934,35 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         </button>
       </div>
 
+      {/* Aviso baseado no role do usuário */}
+      {user?.role === 'AUTOR' ? (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <UserCheck className="h-5 w-5 text-green-600 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-green-900">Autor Principal</h4>
+              <p className="text-sm text-green-700 mt-1">
+                Você ({user?.name}) é o autor principal e não pode ser removido do projeto.
+                Pode adicionar outros integrantes se necessário.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <GraduationCap className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-blue-900">Orientador</h4>
+              <p className="text-sm text-blue-700 mt-1">
+                Como orientador, você deve adicionar os alunos/autores do projeto. 
+                Você será automaticamente adicionado como orientador na próxima etapa.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {formData.category && (
         <div className="bg-blue-50 p-4 rounded-md">
           <p className="text-sm text-blue-800">
@@ -714,41 +976,54 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         {formData.members.map((member, index) => (
           <div key={index} className="p-6 border border-gray-200 rounded-lg">
             <div className="flex justify-between items-center mb-4">
-              <h4 className="font-medium text-gray-900">Integrante {index + 1}</h4>
-              <button
-                type="button"
-                onClick={() => removeMember(index)}
-                className="text-red-600 hover:text-red-800"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Busca por CPF */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar por CPF (opcional)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={member.cpf || ''}
-                  onChange={(e) => updateMember(index, 'cpf', e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="000.000.000-00"
-                />
+              <h4 className="font-medium text-gray-900">
+                {user?.role === 'AUTOR' && index === 0 ? (
+                  <span className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-green-600" />
+                    Autor Principal (Você)
+                  </span>
+                ) : (
+                  `Integrante ${index + 1}`
+                )}
+              </h4>
+              {!(user?.role === 'AUTOR' && index === 0) && (
                 <button
                   type="button"
-                  onClick={() => member.cpf && searchMemberByCPF(index, member.cpf)}
-                  disabled={!member.cpf || searchingCPF}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
+                  onClick={() => removeMember(index)}
+                  className="text-red-600 hover:text-red-800"
                 >
-                  <Search className="h-4 w-4" />
+                  <X className="h-4 w-4" />
                 </button>
-              </div>
+              )}
             </div>
 
-            {/* Dados pessoais com validação */}
+            {/* Busca por CPF para integrantes adicionais (não para autor principal se for AUTOR) */}
+            {!(user?.role === 'AUTOR' && index === 0) && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Buscar por CPF (opcional)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={member.cpf || ''}
+                    onChange={(e) => updateMember(index, 'cpf', e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="000.000.000-00"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => member.cpf && searchMemberByCPF(index, member.cpf)}
+                    disabled={!member.cpf || searchingCPF}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
+                  >
+                    <Search className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Dados pessoais */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ValidatedField
                 label="Nome Completo"
@@ -757,6 +1032,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
                 onChange={(e) => updateMember(index, 'name', e.target.value)}
                 validationRules={validationRules.memberName}
                 maxLength={200}
+                disabled={user?.role === 'AUTOR' && index === 0} // Desabilitar para autor principal
               />
 
               <ValidatedField
@@ -765,6 +1041,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
                 value={member.email || ''}
                 onChange={(e) => updateMember(index, 'email', e.target.value)}
                 validationRules={validationRules.email}
+                disabled={user?.role === 'AUTOR' && index === 0} // Desabilitar para autor principal
               />
 
               <ValidatedField
@@ -889,14 +1166,6 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
             </div>
           </div>
         ))}
-
-        {formData.members.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>Nenhum integrante adicionado ainda.</p>
-            <p className="text-sm">Clique em "Adicionar Integrante" para começar.</p>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -919,11 +1188,18 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
         </button>
       </div>
 
-      <div className="bg-blue-50 p-4 rounded-md">
-        <p className="text-sm text-blue-800">
-          <AlertCircle className="h-4 w-4 inline mr-1" />
-          É obrigatório pelo menos 1 orientador. Máximo de 2 orientadores (orientador + coorientador).
-        </p>
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-yellow-900">Importante</h4>
+            <p className="text-sm text-yellow-700 mt-1">
+              É obrigatório pelo menos 1 orientador. Máximo de 2 orientadores (orientador + coorientador).
+              <br />
+              <strong>Orientadores não podem ser integrantes do projeto.</strong>
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -931,15 +1207,26 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
           <div key={index} className="p-6 border border-gray-200 rounded-lg">
             <div className="flex justify-between items-center mb-4">
               <h4 className="font-medium text-gray-900">
-                {index === 0 ? 'Orientador' : 'Coorientador'}
+                {user?.role === 'ORIENTADOR' && index === 0 ? (
+                  <span className="flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4 text-blue-600" />
+                    Orientador Principal (Você)
+                  </span>
+                ) : index === 0 ? (
+                  'Orientador'
+                ) : (
+                  'Coorientador'
+                )}
               </h4>
-              <button
-                type="button"
-                onClick={() => removeOrientador(index)}
-                className="text-red-600 hover:text-red-800"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              {!(user?.role === 'ORIENTADOR' && index === 0) && (
+                <button
+                  type="button"
+                  onClick={() => removeOrientador(index)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
             <div className="mb-4">
@@ -951,13 +1238,14 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
                   type="text"
                   value={orientador.cpf || ''}
                   onChange={(e) => updateOrientador(index, 'cpf', e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={user?.role === 'ORIENTADOR' && index === 0}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                   placeholder="000.000.000-00"
                 />
                 <button
                   type="button"
                   onClick={() => orientador.cpf && searchOrientadorByCPF(index, orientador.cpf)}
-                  disabled={!orientador.cpf || searchingCPF}
+                  disabled={!orientador.cpf || searchingCPF || (user?.role === 'ORIENTADOR' && index === 0)}
                   className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
                 >
                   <Search className="h-4 w-4" />
@@ -973,6 +1261,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
                 onChange={(e) => updateOrientador(index, 'name', e.target.value)}
                 validationRules={validationRules.memberName}
                 maxLength={200}
+                disabled={user?.role === 'ORIENTADOR' && index === 0}
               />
 
               <ValidatedField
@@ -982,6 +1271,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
                 value={orientador.email}
                 onChange={(e) => updateOrientador(index, 'email', e.target.value)}
                 validationRules={validationRules.email}
+                disabled={user?.role === 'ORIENTADOR' && index === 0}
               />
 
               <ValidatedField
@@ -1085,8 +1375,8 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div className="p-6 border-b">
+      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b flex-shrink-0">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-900">Criar Novo Projeto</h2>
             <button
@@ -1098,8 +1388,8 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
           </div>
           
           <div className="flex items-center mt-4 space-x-4">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center">
+              {(user?.role === 'ORIENTADOR' ? [1, 2] : [1, 2, 3]).map((step) => (
+                <div key={step} className="flex items-center">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     currentStep >= step
@@ -1122,31 +1412,31 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
           
           <div className="mt-2 text-sm text-gray-600">
             {currentStep === 1 && 'Dados do Projeto'}
-            {currentStep === 2 && 'Integrantes'}
+            {currentStep === 2 && (user?.role === 'ORIENTADOR' ? 'Integrantes (Final)' : 'Integrantes')}
             {currentStep === 3 && 'Orientadores'}
           </div>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+        <div className="p-6 overflow-y-auto flex-1">
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
         </div>
 
-        <div className="p-6 border-t bg-gray-50 flex justify-between">
+        <div className="p-6 border-t bg-gray-50 flex justify-between flex-shrink-0">
           <button
             onClick={prevStep}
             disabled={currentStep === 1}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-3 text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-4 w-4" />
             Anterior
           </button>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={onCancel}
-              className="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-6 py-3 text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
             >
               Cancelar
             </button>
@@ -1154,7 +1444,8 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
             {currentStep < 3 ? (
               <button
                 onClick={nextStep}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                disabled={!validateStep(currentStep)}
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Próximo
                 <ChevronRight className="h-4 w-4" />
@@ -1162,8 +1453,8 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                disabled={loading || !validateStep(3)}
+                className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Save className="h-4 w-4" />
                 {loading ? 'Criando...' : 'Criar Projeto'}
@@ -1172,7 +1463,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
           </div>
         </div>
       </div>
-    </div>
+    </div>   
   );
 };
 

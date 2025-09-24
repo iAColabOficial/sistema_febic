@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 // Interface para dados de registro
 interface RegisterData {
-  // Dados básicos (Step 1)
+  // Dados bÃ¡sicos (Step 1)
   name: string;
   email: string;
   cpf?: string;
@@ -27,7 +27,7 @@ interface RegisterData {
   zipCode?: string;
   country?: string;
   
-  // Dados acadêmicos (Step 3)
+  // Dados acadÃªmicos (Step 3)
   institution?: string;
   position?: string;
   formation?: string;
@@ -37,15 +37,15 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    // Validações básicas
+    // ValidaÃ§Ãµes bÃ¡sicas
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email e senha são obrigatórios'
+        message: 'Email e senha sÃ£o obrigatÃ³rios'
       });
     }
 
-    // Buscar usuário por email
+    // Buscar usuÃ¡rio por email
     const user = await prisma.user.findUnique({
       where: { email },
       select: {
@@ -78,11 +78,11 @@ export const login = async (req: Request, res: Response) => {
       }
     });
 
-    // Verificar se usuário existe e está ativo
+    // Verificar se usuÃ¡rio existe e estÃ¡ ativo
     if (!user || !user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Email ou senha inválidos'
+        message: 'Email ou senha invÃ¡lidos'
       });
     }
 
@@ -91,7 +91,7 @@ export const login = async (req: Request, res: Response) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Email ou senha inválidos'
+        message: 'Email ou senha invÃ¡lidos'
       });
     }
 
@@ -136,7 +136,7 @@ export const register = async (req: Request, res: Response) => {
   try {
     // Pegar TODOS os campos do body que o frontend envia
     const { 
-      // Step 1 - Dados básicos
+      // Step 1 - Dados bÃ¡sicos
       email, 
       cpf, 
       name, 
@@ -155,13 +155,13 @@ export const register = async (req: Request, res: Response) => {
       zipCode,
       country,
       
-      // Step 3 - Dados acadêmicos
+      // Step 3 - Dados acadÃªmicos
       institution,
       position,
       formation
     } = req.body;
 
-    // Verificar se usuário já existe
+    // Verificar se usuÃ¡rio jÃ¡ existe
     const existingUser = await prisma.user.findFirst({
       where: { 
         OR: [
@@ -174,7 +174,7 @@ export const register = async (req: Request, res: Response) => {
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: 'Email ou CPF já cadastrado'
+        message: 'Email ou CPF jÃ¡ cadastrado'
       });
     }
 
@@ -185,7 +185,7 @@ export const register = async (req: Request, res: Response) => {
 
     const user = await prisma.user.create({
       data: {
-        // Dados básicos
+        // Dados bÃ¡sicos
         email,
         cpf,
         name,
@@ -193,7 +193,7 @@ export const register = async (req: Request, res: Response) => {
         passwordHash: hashedPassword,
         role: role || 'AUTOR',
         
-        // Dados pessoais - AGORA INCLUÍDOS
+        // Dados pessoais - AGORA INCLUÃDOS
         birthDate: parsedBirthDate,
         gender,
         nationality: nationality || 'Brasileiro',
@@ -204,7 +204,7 @@ export const register = async (req: Request, res: Response) => {
         zipCode,
         country: country || 'Brasil',
         
-        // Dados acadêmicos - AGORA INCLUÍDOS
+        // Dados acadÃªmicos - AGORA INCLUÃDOS
         institution,
         position,
         formation
@@ -242,7 +242,7 @@ export const register = async (req: Request, res: Response) => {
 
     res.status(201).json({
       success: true,
-      message: 'Usuário criado com sucesso',
+      message: 'UsuÃ¡rio criado com sucesso',
       data: { user, token }
     });
 
@@ -262,11 +262,11 @@ export const getMe = async (req: AuthRequest, res: Response) => {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        message: 'Usuário não autenticado'
+        message: 'UsuÃ¡rio nÃ£o autenticado'
       });
     }
 
-    // Buscar usuário com todos os dados
+    // Buscar usuÃ¡rio com todos os dados
     const user = await prisma.user.findUnique({
       where: { id: String(userId) },
       select: {
@@ -301,14 +301,14 @@ export const getMe = async (req: AuthRequest, res: Response) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Usuário não encontrado'
+        message: 'UsuÃ¡rio nÃ£o encontrado'
       });
     }
 
     if (!user.isActive) {
       return res.status(403).json({
         success: false,
-        message: 'Usuário inativo'
+        message: 'UsuÃ¡rio inativo'
       });
     }
 
@@ -318,7 +318,7 @@ export const getMe = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Erro ao buscar usuário:', error);
+    console.error('Erro ao buscar usuÃ¡rio:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
@@ -333,7 +333,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        message: 'Usuário não autenticado'
+        message: 'UsuÃ¡rio nÃ£o autenticado'
       });
     }
 
@@ -354,11 +354,11 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       formation
     } = req.body;
 
-    // Validações básicas
+    // ValidaÃ§Ãµes bÃ¡sicas
     if (name && !name.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Nome não pode estar vazio'
+        message: 'Nome nÃ£o pode estar vazio'
       });
     }
 
@@ -368,12 +368,12 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       if (isNaN(parsedBirthDate.getTime())) {
         return res.status(400).json({
           success: false,
-          message: 'Data de nascimento inválida'
+          message: 'Data de nascimento invÃ¡lida'
         });
       }
     }
 
-    // Atualizar usuário
+    // Atualizar usuÃ¡rio
     const updatedUser = await prisma.user.update({
       where: { id: String(userId) },
       data: {
@@ -444,14 +444,14 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        message: 'Usuário não autenticado'
+        message: 'UsuÃ¡rio nÃ£o autenticado'
       });
     }
 
     if (!currentPassword || !newPassword) {
       return res.status(400).json({
         success: false,
-        message: 'Senha atual e nova senha são obrigatórias'
+        message: 'Senha atual e nova senha sÃ£o obrigatÃ³rias'
       });
     }
 
@@ -462,7 +462,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Buscar usuário atual
+    // Buscar usuÃ¡rio atual
     const user = await prisma.user.findUnique({
       where: { id: String(userId) },
       select: { passwordHash: true, isActive: true }
@@ -471,7 +471,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
     if (!user || !user.isActive) {
       return res.status(404).json({
         success: false,
-        message: 'Usuário não encontrado'
+        message: 'UsuÃ¡rio nÃ£o encontrado'
       });
     }
 
@@ -507,11 +507,11 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Função auxiliar para logout (apenas para logs)
+// FunÃ§Ã£o auxiliar para logout (apenas para logs)
 export const logout = async (req: AuthRequest, res: Response) => {
   try {
-    // Como usamos JWT stateless, não precisamos invalidar o token no servidor
-    // Apenas registramos o logout para auditoria se necessário
+    // Como usamos JWT stateless, nÃ£o precisamos invalidar o token no servidor
+    // Apenas registramos o logout para auditoria se necessÃ¡rio
     
     res.json({
       success: true,
@@ -526,31 +526,31 @@ export const logout = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-// Adicionar esta função ao final do seu authController.ts existente:
+// Adicionar esta funÃ§Ã£o ao final do seu authController.ts existente:
 
 export const searchUserByCPF = async (req: Request, res: Response) => {
   try {
     const { cpf } = req.params;
     
-    // Validar CPF básico
+    // Validar CPF bÃ¡sico
     if (!cpf) {
       return res.status(400).json({
         success: false,
-        message: 'CPF é obrigatório'
+        message: 'CPF Ã© obrigatÃ³rio'
       });
     }
 
-    // Limpar CPF (remover pontos e traços)
+    // Limpar CPF (remover pontos e traÃ§os)
     const cleanCPF = cpf.replace(/\D/g, '');
     
     if (cleanCPF.length !== 11) {
       return res.status(400).json({
         success: false,
-        message: 'CPF deve ter 11 dígitos'
+        message: 'CPF deve ter 11 dÃ­gitos'
       });
     }
 
-    // Buscar usuário
+    // Buscar usuÃ¡rio
     const user = await prisma.user.findUnique({
       where: { cpf: cleanCPF },
       select: {
@@ -576,7 +576,7 @@ export const searchUserByCPF = async (req: Request, res: Response) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Usuário não encontrado'
+        message: 'UsuÃ¡rio nÃ£o encontrado'
       });
     }
 
@@ -586,7 +586,7 @@ export const searchUserByCPF = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Erro ao buscar usuário por CPF:', error);
+    console.error('Erro ao buscar usuÃ¡rio por CPF:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'

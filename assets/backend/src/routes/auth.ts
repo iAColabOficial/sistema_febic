@@ -4,7 +4,7 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
-// Rotas públicas
+// Rotas pÃºblicas
 router.post('/register', register);
 router.post('/login', login);
 

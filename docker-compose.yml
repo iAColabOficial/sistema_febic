@@ -29,6 +29,8 @@ services:
       UPLOAD_PATH: ./uploads
     volumes:
       - uploads_data:/app/uploads
+    ports:
+      - "5555:5555"  # Porta para Prisma Studio
     expose:
       - "3002"
     depends_on:

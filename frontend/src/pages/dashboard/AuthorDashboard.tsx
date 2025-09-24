@@ -264,13 +264,13 @@ const AuthorDashboard: React.FC = () => {
                 <p className="text-sm text-gray-600">Visualizar, editar e acompanhar todos os seus projetos</p>
               </button>
               
-              <button 
-                onClick={() => setShowCreateForm(true)}
+              <button
+                onClick={() => navigate('/help')}
                 className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left group"
               >
-                <Plus className="w-6 h-6 text-green-600 mb-3 group-hover:scale-110 transition-transform" />
-                <h4 className="font-medium text-gray-900">Novo Projeto</h4>
-                <p className="text-sm text-gray-600">Criar um novo projeto de iniciação científica</p>
+                <FileText className="w-6 h-6 text-purple-600 mb-3 group-hover:scale-110 transition-transform" />
+                <h4 className="font-medium text-gray-900">Documentação</h4>
+                <p className="text-sm text-gray-600">Acesse guias e documentos de apoio</p>
               </button>
             </div>
           </div>
