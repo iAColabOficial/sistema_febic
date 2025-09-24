@@ -22,10 +22,10 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   const { user } = useAuth();
   
   // âœ… CORRIGIDO: Debug para ver estrutura do projeto
-  console.log('ðŸ” DEBUG - Projeto recebido no modal:', project);
-  console.log('ðŸ” DEBUG - Chaves do projeto:', project ? Object.keys(project) : 'project Ã© null/undefined');
-  console.log('ðŸ” DEBUG - Owner do projeto:', project?.owner);
-  console.log('ðŸ” DEBUG - User atual:', user);
+  console.log('DEBUG - Projeto recebido no modal:', project);
+  console.log('DEBUG - Chaves do projeto:', project ? Object.keys(project) : 'project Ã© null/undefined');
+  console.log('DEBUG - Owner do projeto:', project?.owner);
+  console.log('DEBUG - User atual:', user);
 
   // âœ… CORRIGIDO: owner em vez de author, ownerId em vez de authorId
   const isAuthor = user?.id === project?.ownerId;
@@ -47,7 +47,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
   // âœ… ADICIONADO: ProteÃ§Ã£o se project for null/undefined
   if (!project) {
-    console.error('âŒ Projeto nÃ£o fornecido para o modal');
+    console.error('âŒ Projeto não fornecido para o modal');
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl p-6 max-w-md w-full">
@@ -56,7 +56,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               Erro ao carregar projeto
             </h2>
             <p className="text-gray-600 mb-4">
-              Os dados do projeto nÃ£o foram carregados corretamente.
+              Os dados do projeto não foram carregados corretamente.
             </p>
             <button
               onClick={onClose}
@@ -133,7 +133,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               <div>
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4" />
-                  Data de CriaÃ§Ã£o
+                  Data de Criação
                 </div>
                 <p className="text-gray-900">
                   {format(new Date(project.createdAt), 'dd/MM/yyyy \'Ã s\' HH:mm')}
@@ -145,7 +145,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               <div>
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Clock className="w-4 h-4" />
-                  Ãšltima AtualizaÃ§Ã£o
+                  Última Atualização
                 </div>
                 <p className="text-gray-900">
                   {format(new Date(project.updatedAt), 'dd/MM/yyyy \'Ã s\' HH:mm')}
@@ -167,14 +167,14 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 p-4 bg-gray-50 rounded-lg">
               {project.institution && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-1">InstituiÃ§Ã£o</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-1">Instituição</h4>
                   <p className="text-gray-900">{project.institution}</p>
                 </div>
               )}
               
               {project.areaConhecimento && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-1">Ãrea de Conhecimento</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-1">Área de Conhecimento</h4>
                   <p className="text-gray-900">{project.areaConhecimento.nome}</p>
                 </div>
               )}
@@ -250,7 +250,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
               >
                 <CheckCircle className="w-4 h-4" />
-                Enviar para AvaliaÃ§Ã£o
+                Enviar para Avaliação
               </button>
             )}
 
