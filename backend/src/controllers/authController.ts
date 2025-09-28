@@ -257,7 +257,7 @@ export const register = async (req: Request, res: Response) => {
 
 export const getMe = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
 
     if (!userId) {
       return res.status(401).json({
@@ -328,7 +328,7 @@ export const getMe = async (req: AuthRequest, res: Response) => {
 
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
 
     if (!userId) {
       return res.status(401).json({
@@ -438,7 +438,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
 
 export const changePassword = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const { currentPassword, newPassword } = req.body;
 
     if (!userId) {
@@ -576,7 +576,7 @@ export const searchUserByCPF = async (req: Request, res: Response) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'UsuÃ¡rio nÃ£o encontrado'
+        message: 'Usuário não encontrado'
       });
     }
 
@@ -586,7 +586,7 @@ export const searchUserByCPF = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Erro ao buscar usuÃ¡rio por CPF:', error);
+    console.error('Erro ao buscar usuário por CPF:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'

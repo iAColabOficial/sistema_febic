@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export const createProject = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Não autenticado' });
     }
@@ -366,7 +366,7 @@ function getSchoolLevelFromFormation(formation?: string | null): string {
 // 📊 Modificar getProjects para incluir filtros de orientador
 export const getProjects = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     
     if (!userId || !userRole) {
@@ -464,7 +464,7 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
 // 📈 Modificar getProjectStats para considerar roles
 export const getProjectStats = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     
     if (!userId || !userRole) {
@@ -532,7 +532,7 @@ export const getProjectStats = async (req: AuthRequest, res: Response) => {
 // Manter as outras funções existentes inalteradas
 export const getProjectById = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const projectId = req.params.id;
 
@@ -634,7 +634,7 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
 
 export const updateProject = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const projectId = req.params.id;
 
@@ -863,7 +863,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
 
 export const deleteProject = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const projectId = req.params.id;
 
@@ -957,7 +957,7 @@ export const deleteProject = async (req: AuthRequest, res: Response) => {
 
 export const submitProject = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const projectId = req.params.id;
 
@@ -1137,7 +1137,7 @@ export const submitProject = async (req: AuthRequest, res: Response) => {
 
 export const updateProjectStatus = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const projectId = req.params.id;
     const { status, notes } = req.body;

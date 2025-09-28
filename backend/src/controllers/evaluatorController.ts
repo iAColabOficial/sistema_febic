@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // Aplicar para ser avaliador
 export const applyForEvaluator = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -225,7 +225,7 @@ export const evaluateApplication = async (req: AuthRequest, res: Response) => {
           status: decision,
           adminNotes,
           evaluatedAt: new Date(),
-          evaluatedBy: user.userId
+          evaluatedBy: user.id
         }
       });
 
@@ -263,7 +263,7 @@ export const evaluateApplication = async (req: AuthRequest, res: Response) => {
 // Buscar status da candidatura do usuário atual
 export const getMyApplicationStatus = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({
         success: false,

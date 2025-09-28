@@ -29,7 +29,7 @@ export const DOCUMENT_TYPES = {
 // Upload de documento
 export const uploadDocument = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const { projectId } = req.params;
     const { documentType, description } = req.body;
@@ -139,7 +139,7 @@ export const uploadDocument = async (req: AuthRequest, res: Response) => {
 // Listar documentos de um projeto
 export const getProjectDocuments = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const { projectId } = req.params;
 
@@ -197,7 +197,7 @@ export const getProjectDocuments = async (req: AuthRequest, res: Response) => {
 // Download de documento
 export const downloadDocument = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const { documentId } = req.params;
 
@@ -268,7 +268,7 @@ export const downloadDocument = async (req: AuthRequest, res: Response) => {
 // Excluir documento
 export const deleteDocument = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const { documentId } = req.params;
 
@@ -325,7 +325,7 @@ export const deleteDocument = async (req: AuthRequest, res: Response) => {
 // Aprovar/Rejeitar documento (Admin/Avaliador)
 export const reviewDocument = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const { documentId } = req.params;
     const { approved, rejectionReason } = req.body;
@@ -365,7 +365,7 @@ export const reviewDocument = async (req: AuthRequest, res: Response) => {
 // Obter informações de um documento específico
 export const getDocumentInfo = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const { documentId } = req.params;
 

@@ -3,9 +3,10 @@ import jwt from 'jsonwebtoken';
 
 export interface AuthRequest extends Request {
   user?: {
-    userId: string;
+    id: string;        // Mude de userId para id
     email: string;
     role: string;
+    isActive?: boolean; // Adicione esta propriedade
   };
 }
 
@@ -29,7 +30,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     }
 
     req.user = {
-      userId: String(decoded.userId),
+      id: String(decoded.userId),
       email: decoded.email,
       role: decoded.role
     };

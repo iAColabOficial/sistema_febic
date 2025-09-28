@@ -8,6 +8,7 @@ import adminRoutes from './routes/admin';
 import evaluatorRoutes from './routes/evaluator';
 import forgotPasswordRoutes from './routes/forgotPassword';
 
+
 // Configurar variáveis de ambiente PRIMEIRO
 dotenv.config();
 
@@ -116,7 +117,10 @@ app.use('/api/admin', adminRoutes);
 
 app.use('/api/evaluator', evaluatorRoutes);
 
+
+
 app.use('/api/auth/forgot-password', forgotPasswordRoutes);
+
 
 // Rotas de avaliações (já inclui /api)
 // app.use('/api', evaluationRoutes); // TODO: Adicionar quando implementar avaliações
