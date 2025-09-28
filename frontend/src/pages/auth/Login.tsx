@@ -63,20 +63,34 @@ const Login: React.FC = () => {
 
           {/* ERRO COM CSS INLINE FORÇADO */}
           {showError && (
-            <div style={{
-              backgroundColor: '#fee2e2',
-              border: '1px solid #fca5a5',
-              borderRadius: '8px',
-              padding: '16px',
-              marginBottom: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              color: '#b91c1c'
-            }}>
-              <span style={{ marginRight: '12px' }}>⚠️</span>
-              <span style={{ fontWeight: '500' }}>Email ou senha incorretos</span>
+          <div style={{
+            backgroundColor: '#fee2e2',
+            border: '1px solid #fca5a5',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            color: '#b91c1c'
+          }}>
+            <span style={{ marginRight: '12px' }}>⚠️</span>
+            <div>
+              <span style={{ fontWeight: '500', display: 'block' }}>Email ou senha incorretos</span>
+              <Link 
+                to="/auth/forgot-password" 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#dc2626', 
+                  textDecoration: 'underline',
+                  marginTop: '4px',
+                  display: 'inline-block'
+                }}
+              >
+                Esqueceu sua senha? Clique aqui para recuperar
+              </Link>
             </div>
-          )}
+          </div>
+        )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -144,12 +158,12 @@ const Login: React.FC = () => {
                   Lembrar de mim
                 </label>
               </div>
-              <button
-                type="button"
+              <Link
+                to="/auth/forgot-password"
                 className="text-sm text-primary-600 hover:text-primary-500 transition-colors font-medium"
               >
                 Esqueceu a senha?
-              </button>
+              </Link>
             </div>
 
             <Button

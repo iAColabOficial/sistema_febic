@@ -14,6 +14,7 @@ import EditUserModal from './EditUserModal';
 import EditProjectModal from './EditProjectModal'
 import CreateUserModal from './CreateUserModal';
 
+
 // Interfaces
 interface User {
   id: string;
@@ -650,6 +651,13 @@ const AdminDashboard: React.FC = () => {
                     <BarChart3 className="w-6 h-6 text-purple-600 mb-3 group-hover:scale-110 transition-transform" />
                     <h4 className="font-medium text-gray-900">Relatórios</h4>
                     <p className="text-sm text-gray-600">Gerar relatórios detalhados</p>
+                  </button>
+                  <button 
+                    onClick={() => navigate('/admin/evaluator-applications')}
+                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left group">
+                    <Star className="w-6 h-6 text-purple-600 mb-3 group-hover:scale-110 transition-transform" />
+                    <h4 className="font-medium text-gray-900">Candidaturas de Avaliador</h4>
+                    <p className="text-sm text-gray-600">Aprovar e gerenciar solicitações de avaliadores</p>
                   </button>
                 </div>
               </div>

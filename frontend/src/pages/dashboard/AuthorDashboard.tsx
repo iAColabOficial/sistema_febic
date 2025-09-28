@@ -1,19 +1,51 @@
-import React, { useState } from 'react';
+// frontend/src/components/dashboard/AuthorDashboard.tsx (versão atualizada)
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProjects, useProjectStats } from '../../hooks/useProjects';
-import { Plus, FileText, Clock, CheckCircle, LogOut, Eye, ArrowRight, Calendar, Tag } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, LogOut, Eye, ArrowRight, Calendar, Tag, Star, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CreateProject from '../projects/CreateProject';
+import EvaluatorApplicationModal from '../../components/evaluator/EvaluatorApplicationModal';
 import { CreateProjectData, Project, getProjectStatusInfo } from '../../types/Project';
+import api from '../../services/api';
+
+interface EvaluatorApplication {
+  id: string;
+  status: 'PENDENTE' | 'APROVADA' | 'REPROVADA';
+  createdAt: string;
+  adminNotes?: string;
+}
 
 const AuthorDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const { stats, loading: statsLoading } = useProjectStats();
-  const { projects, loading: projectsLoading } = useProjects({ limit: 5 }); // Buscar apenas 5 projetos mais recentes
+  const { projects, loading: projectsLoading } = useProjects({ limit: 5 });
   const { createProject } = useProjects();
   
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEvaluatorModal, setShowEvaluatorModal] = useState(false);
+  const [evaluatorApplication, setEvaluatorApplication] = useState<EvaluatorApplication | null>(null);
+  const [loadingApplication, setLoadingApplication] = useState(false);
   const navigate = useNavigate();
+
+  // Buscar status da candidatura a avaliador
+  useEffect(() => {
+    fetchEvaluatorApplicationStatus();
+  }, []);
+
+  const fetchEvaluatorApplicationStatus = async () => {
+    try {
+      setLoadingApplication(true);
+      const response = await api.get('/evaluator/my-application');
+      if (response.data.success && response.data.data) {
+        setEvaluatorApplication(response.data.data);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar status da candidatura:', error);
+    } finally {
+      setLoadingApplication(false);
+    }
+  };
 
   const handleCreateProject = async (data: CreateProjectData) => {
     await createProject(data);
@@ -21,7 +53,11 @@ const AuthorDashboard: React.FC = () => {
   };
 
   const handleViewProject = (project: Project) => {
-    navigate(`/projects`); // Navegar para a lista onde pode ver detalhes
+    navigate(`/projects`);
+  };
+
+  const handleEvaluatorApplicationSuccess = () => {
+    fetchEvaluatorApplicationStatus();
   };
 
   const formatDate = (dateString: string) => {
@@ -43,6 +79,40 @@ const AuthorDashboard: React.FC = () => {
       purple: 'bg-purple-100 text-purple-800'
     };
     return colorMap[statusInfo?.color || 'gray'];
+  };
+
+  const getApplicationStatusInfo = (status: string) => {
+    switch (status) {
+      case 'PENDENTE':
+        return {
+          label: 'Em análise',
+          color: 'bg-yellow-100 text-yellow-800',
+          icon: <Clock className="w-4 h-4" />
+        };
+      case 'APROVADA':
+        return {
+          label: 'Aprovada',
+          color: 'bg-green-100 text-green-800',
+          icon: <CheckCircle className="w-4 h-4" />
+        };
+      case 'REPROVADA':
+        return {
+          label: 'Reprovada',
+          color: 'bg-red-100 text-red-800',
+          icon: <AlertCircle className="w-4 h-4" />
+        };
+      default:
+        return {
+          label: 'Desconhecido',
+          color: 'bg-gray-100 text-gray-800',
+          icon: <AlertCircle className="w-4 h-4" />
+        };
+    }
+  };
+
+  // Verificar se pode aplicar para avaliador
+  const canApplyForEvaluator = () => {
+    return user?.role !== 'AVALIADOR' && !evaluatorApplication;
   };
 
   return (
@@ -78,7 +148,7 @@ const AuthorDashboard: React.FC = () => {
         <div className="bg-white overflow-hidden shadow rounded-lg mb-6">
           <div className="px-4 py-5 sm:p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-2">
-              Olá, {user?.name}! 👩‍💻
+              Olá, {user?.name}!
             </h2>
             <p className="text-gray-600">
               Bem-vindo ao FEBIC! Aqui você pode criar e gerenciar seus projetos de iniciação científica.
@@ -160,7 +230,7 @@ const AuthorDashboard: React.FC = () => {
           </button>
         </div>
 
-        {/* Recent Projects Section - MELHORADA */}
+        {/* Recent Projects Section */}
         <div className="bg-white shadow rounded-lg mb-8">
           <div className="px-4 py-5 sm:p-6">
             <div className="flex justify-between items-center mb-6">
@@ -249,12 +319,12 @@ const AuthorDashboard: React.FC = () => {
         </div>
 
         {/* Actions Quick Access */}
-        <div className="bg-white shadow rounded-lg">
+        <div className="bg-white shadow rounded-lg mb-6">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
               Ações Rápidas
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button
                 onClick={() => navigate('/projects')}
                 className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left group"
@@ -272,6 +342,38 @@ const AuthorDashboard: React.FC = () => {
                 <h4 className="font-medium text-gray-900">Documentação</h4>
                 <p className="text-sm text-gray-600">Acesse guias e documentos de apoio</p>
               </button>
+
+              {/* Botão Quero ser Avaliador */}
+              {canApplyForEvaluator() ? (
+                <button
+                  onClick={() => setShowEvaluatorModal(true)}
+                  className="p-4 border border-purple-200 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors text-left group"
+                >
+                  <Star className="w-6 h-6 text-purple-600 mb-3 group-hover:scale-110 transition-transform" />
+                  <h4 className="font-medium text-gray-900">Quero ser Avaliador</h4>
+                  <p className="text-sm text-gray-600">Candidate-se para avaliar projetos da FEBIC</p>
+                </button>
+              ) : evaluatorApplication && (
+                <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-2 mb-2">
+                    {getApplicationStatusInfo(evaluatorApplication.status).icon}
+                    <h4 className="font-medium text-gray-900">Candidatura a Avaliador</h4>
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getApplicationStatusInfo(evaluatorApplication.status).color} mb-2`}>
+                    {getApplicationStatusInfo(evaluatorApplication.status).label}
+                  </span>
+                  <p className="text-sm text-gray-600">
+                    {evaluatorApplication.status === 'PENDENTE' && 'Sua candidatura está sendo analisada'}
+                    {evaluatorApplication.status === 'APROVADA' && 'Parabéns! Sua candidatura foi aprovada'}
+                    {evaluatorApplication.status === 'REPROVADA' && 'Sua candidatura foi reprovada'}
+                  </p>
+                  {evaluatorApplication.adminNotes && (
+                    <p className="text-xs text-gray-500 mt-2 italic">
+                      "{evaluatorApplication.adminNotes}"
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -281,7 +383,7 @@ const AuthorDashboard: React.FC = () => {
           <div className="flex">
             <CheckCircle className="h-5 w-5 text-blue-600 mr-2" />
             <div>
-              <p className="text-blue-800 font-medium">✅ Sistema conectado!</p>
+              <p className="text-blue-800 font-medium">Sistema conectado!</p>
               <p className="text-blue-700 text-sm">
                 Você tem {stats?.total || 0} projeto{(stats?.total || 0) !== 1 ? 's' : ''} cadastrado{(stats?.total || 0) !== 1 ? 's' : ''}.
               </p>
@@ -290,13 +392,19 @@ const AuthorDashboard: React.FC = () => {
         </div>
       </main>
 
-      {/* Create Form Modal */}
+      {/* Modals */}
       {showCreateForm && (
         <CreateProject
           onSubmit={handleCreateProject}
           onCancel={() => setShowCreateForm(false)}
         />
       )}
+
+      <EvaluatorApplicationModal
+        isOpen={showEvaluatorModal}
+        onClose={() => setShowEvaluatorModal(false)}
+        onSuccess={handleEvaluatorApplicationSuccess}
+      />
     </div>
   );
 };

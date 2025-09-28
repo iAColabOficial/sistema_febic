@@ -544,7 +544,39 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ success: false, message: 'ID inválido' });
     }
 
-    // Buscar o projeto com validação de acesso baseada no role
+    // Para administradores, incluir TUDO
+    if (userRole === 'ADMINISTRADOR') {
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        include: {
+          owner: true, // Todos os campos do owner
+          members: true, // Todos os campos dos membros
+          orientadores: true, // Todos os campos dos orientadores
+          areaConhecimento: true,
+          documents: true, // INCLUIR DOCUMENTOS
+          avaliacoes: { // INCLUIR AVALIAÇÕES
+            include: {
+              avaliador: {
+                select: {
+                  name: true,
+                  email: true
+                }
+              }
+            }
+          },
+          pagamentos: true, // INCLUIR PAGAMENTOS
+          awards: true // INCLUIR PRÊMIOS
+        }
+      });
+
+      if (!project) {
+        return res.status(404).json({ success: false, message: 'Projeto não encontrado' });
+      }
+
+      return res.json({ success: true, data: project });
+    }
+
+    // Para outros usuários, manter a validação de acesso existente
     let whereClause: any = { id: projectId };
 
     if (userRole === 'AUTOR') {
@@ -571,7 +603,6 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
         }
       };
     }
-    // Admin pode ver qualquer projeto
 
     const project = await prisma.project.findFirst({
       where: whereClause,
@@ -586,7 +617,7 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
         members: true,
         orientadores: true,
         areaConhecimento: true,
-        documents: true
+        documents: true // Permitir que autores vejam seus documentos
       }
     });
     
@@ -925,13 +956,371 @@ export const deleteProject = async (req: AuthRequest, res: Response) => {
 };
 
 export const submitProject = async (req: AuthRequest, res: Response) => {
-  // Implementação existente mantida
+  try {
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    const projectId = req.params.id;
+
+    if (!userId || !userRole) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Não autenticado' 
+      });
+    }
+
+    if (!projectId || typeof projectId !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'ID do projeto inválido' 
+      });
+    }
+
+    console.log(`🚀 Iniciando submissão do projeto ${projectId} pelo usuário ${userId}`);
+
+    // Buscar o projeto com validação de acesso
+    let whereClause: any = { id: projectId };
+
+    if (userRole === 'AUTOR') {
+      whereClause = {
+        id: projectId,
+        OR: [
+          { ownerId: userId },
+          {
+            members: {
+              some: {
+                userId: userId
+              }
+            }
+          }
+        ]
+      };
+    } else if (userRole === 'ORIENTADOR') {
+      whereClause = {
+        id: projectId,
+        orientadores: {
+          some: {
+            userId: userId
+          }
+        }
+      };
+    }
+    // Admin pode submeter qualquer projeto
+
+    const project = await prisma.project.findFirst({
+      where: whereClause,
+      include: {
+        members: true,
+        orientadores: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Projeto não encontrado ou você não tem permissão para submetê-lo'
+      });
+    }
+
+    // Verificar se o projeto já foi submetido
+    if (project.status !== 'RASCUNHO') {
+      return res.status(400).json({
+        success: false,
+        message: 'Este projeto já foi submetido ou está em análise'
+      });
+    }
+
+    // Validações obrigatórias
+    if (!project.title || !project.summary || !project.objective || !project.methodology) {
+      return res.status(400).json({
+        success: false,
+        message: 'Preencha todos os campos obrigatórios: título, resumo, objetivos e metodologia'
+      });
+    }
+
+    if (!project.areaConhecimentoId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Selecione uma área de conhecimento'
+      });
+    }
+
+    if (!project.category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Selecione uma categoria'
+      });
+    }
+
+    if (!project.institution || !project.institutionCity || !project.institutionState) {
+      return res.status(400).json({
+        success: false,
+        message: 'Preencha os dados da instituição'
+      });
+    }
+
+    // Validar se tem orientadores
+    if (!project.orientadores || project.orientadores.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'É obrigatório ter pelo menos um orientador'
+      });
+    }
+
+    // Validar se tem membros/autores
+    if (!project.members || project.members.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'É obrigatório ter pelo menos um autor/membro'
+      });
+    }
+
+    console.log(`✅ Validações aprovadas para projeto ${projectId}`);
+
+    // Atualizar status para SUBMETIDO
+    const updatedProject = await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        status: 'SUBMETIDO',
+        submissionDate: new Date(),
+        updatedAt: new Date()
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        members: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        orientadores: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    console.log(`🎉 Projeto ${projectId} submetido com sucesso por ${userId}`);
+
+    res.json({
+      success: true,
+      message: 'Projeto submetido com sucesso! Ele será avaliado pela comissão e você receberá o resultado em breve.',
+      data: updatedProject
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao submeter projeto:', error);
+    
+    const message = error instanceof Error ? error.message : 'Erro interno do servidor';
+    res.status(500).json({ 
+      success: false, 
+      message: `Erro ao submeter projeto: ${message}` 
+    });
+  }
 };
 
 export const updateProjectStatus = async (req: AuthRequest, res: Response) => {
-  // Implementação existente mantida
+  try {
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    const projectId = req.params.id;
+    const { status, notes } = req.body;
+
+    if (!userId || !userRole) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Não autenticado' 
+      });
+    }
+
+    // Verificar se é administrador
+    if (userRole !== 'ADMINISTRADOR') {
+      return res.status(403).json({
+        success: false,
+        message: 'Apenas administradores podem alterar status de projetos'
+      });
+    }
+
+    if (!projectId || typeof projectId !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'ID do projeto inválido' 
+      });
+    }
+
+    // Validar status permitidos
+    const validStatuses = [
+      'RASCUNHO',
+      'SUBMETIDO', 
+      'EM_ANALISE_CIAS',
+      'APROVADO_CIAS',
+      'REPROVADO_CIAS',
+      'AGUARDANDO_PAGAMENTO',
+      'CONFIRMADO_VIRTUAL',
+      'FINALISTA_PRESENCIAL',
+      'PREMIADO',
+      'ARQUIVADO'
+    ];
+
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status inválido. Status permitidos: ' + validStatuses.join(', ')
+      });
+    }
+
+    // Buscar o projeto
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Projeto não encontrado'
+      });
+    }
+
+    // Validações específicas de mudança de status
+    if (status === 'APROVADO_CIAS' && project.status !== 'EM_ANALISE_CIAS') {
+      return res.status(400).json({
+        success: false,
+        message: 'Projeto deve estar em análise para ser aprovado'
+      });
+    }
+
+    if (status === 'FINALISTA_PRESENCIAL' && project.status !== 'CONFIRMADO_VIRTUAL') {
+      return res.status(400).json({
+        success: false,
+        message: 'Projeto deve estar confirmado na etapa virtual para ser finalista presencial'
+      });
+    }
+
+    // Atualizar o status do projeto
+    const updatedProject = await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        status,
+        ...(status === 'APROVADO_CIAS' && { ciasResultDate: new Date() }),
+        ...(status === 'CONFIRMADO_VIRTUAL' && { virtualStartDate: new Date() }),
+        ...(status === 'FINALISTA_PRESENCIAL' && { 
+          isFinalist: true,
+          presentialDate: new Date()
+        }),
+        ...(status === 'PREMIADO' && { isAwarded: true }),
+        updatedAt: new Date()
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    console.log(`Status do projeto ${projectId} alterado para ${status} por admin ${userId}`);
+
+    res.json({
+      success: true,
+      message: `Status do projeto alterado para ${status} com sucesso`,
+      data: updatedProject
+    });
+
+  } catch (error) {
+    console.error('Erro ao atualizar status do projeto:', error);
+    
+    const message = error instanceof Error ? error.message : 'Erro interno do servidor';
+    res.status(500).json({ 
+      success: false, 
+      message: `Erro ao atualizar status: ${message}` 
+    });
+  }
 };
 
 export const getAreasConhecimento = async (req: any, res: Response) => {
-  // Implementação existente mantida
+  try {
+    // Buscar todas as áreas de conhecimento ativas
+    const areas = await prisma.areaConhecimento.findMany({
+      where: {
+        isActive: true
+      },
+      orderBy: [
+        { nivel: 'asc' },
+        { nome: 'asc' }
+      ],
+      select: {
+        id: true,
+        sigla: true,
+        nome: true,
+        nivel: true,
+        paiId: true,
+        isActive: true
+      }
+    });
+
+    // Organizar em estrutura hierárquica
+    const areasHierarquicas = areas.reduce((acc, area) => {
+      if (area.nivel === 1) {
+        // Área principal
+        acc[area.id] = {
+          ...area,
+          subareas: []
+        };
+      } else if (area.paiId && acc[area.paiId]) {
+        // Subárea
+        acc[area.paiId].subareas.push(area);
+      }
+      return acc;
+    }, {} as any);
+
+    // Converter para array
+    const areasArray = Object.values(areasHierarquicas);
+
+    res.json({
+      success: true,
+      data: {
+        areas: areasArray,
+        total: areas.length,
+        principais: areas.filter(a => a.nivel === 1).length,
+        subareas: areas.filter(a => a.nivel > 1).length
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar áreas de conhecimento:', error);
+    
+    const message = error instanceof Error ? error.message : 'Erro interno do servidor';
+    res.status(500).json({ 
+      success: false, 
+      message: `Erro ao buscar áreas: ${message}` 
+    });
+  }
 };

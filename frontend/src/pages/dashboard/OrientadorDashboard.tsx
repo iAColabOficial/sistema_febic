@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// frontend/src/components/dashboard/OrientadorDashboard.tsx (versão atualizada)
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProjects, useProjectStats } from '../../hooks/useProjects';
 import { 
@@ -12,24 +13,56 @@ import {
   Calendar, 
   Tag,
   Users,
-  MessageCircle,
   TrendingUp,
   Award,
   AlertTriangle,
-  Plus
+  Plus,
+  Star,
+  AlertCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CreateProject from '../projects/CreateProject';
+import EvaluatorApplicationModal from '../../components/evaluator/EvaluatorApplicationModal';
 import { CreateProjectData, Project, getProjectStatusInfo } from '../../types/Project';
+import api from '../../services/api';
+
+interface EvaluatorApplication {
+  id: string;
+  status: 'PENDENTE' | 'APROVADA' | 'REPROVADA';
+  createdAt: string;
+  adminNotes?: string;
+}
 
 const OrientadorDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const { stats, loading: statsLoading } = useProjectStats();
-  const { projects, loading: projectsLoading } = useProjects({ limit: 10 }); // Buscar mais projetos para orientadores
+  const { projects, loading: projectsLoading } = useProjects({ limit: 10 });
   const { createProject } = useProjects();
   
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEvaluatorModal, setShowEvaluatorModal] = useState(false);
+  const [evaluatorApplication, setEvaluatorApplication] = useState<EvaluatorApplication | null>(null);
+  const [loadingApplication, setLoadingApplication] = useState(false);
   const navigate = useNavigate();
+
+  // Buscar status da candidatura a avaliador
+  useEffect(() => {
+    fetchEvaluatorApplicationStatus();
+  }, []);
+
+  const fetchEvaluatorApplicationStatus = async () => {
+    try {
+      setLoadingApplication(true);
+      const response = await api.get('/evaluator/my-application');
+      if (response.data.success && response.data.data) {
+        setEvaluatorApplication(response.data.data);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar status da candidatura:', error);
+    } finally {
+      setLoadingApplication(false);
+    }
+  };
 
   const handleCreateProject = async (data: CreateProjectData) => {
     await createProject(data);
@@ -37,11 +70,15 @@ const OrientadorDashboard: React.FC = () => {
   };
 
   const handleViewProject = (project: Project) => {
-    navigate(`/projects/${project.id}`); // Navegar para detalhes específicos
+    navigate(`/projects/${project.id}`);
   };
 
   const handleEvaluateProject = (project: Project) => {
-    navigate(`/projects/${project.id}/evaluate`); // Navegar para avaliação
+    navigate(`/projects/${project.id}/evaluate`);
+  };
+
+  const handleEvaluatorApplicationSuccess = () => {
+    fetchEvaluatorApplicationStatus();
   };
 
   const formatDate = (dateString: string) => {
@@ -63,6 +100,40 @@ const OrientadorDashboard: React.FC = () => {
       purple: 'bg-purple-100 text-purple-800'
     };
     return colorMap[statusInfo?.color || 'gray'];
+  };
+
+  const getApplicationStatusInfo = (status: string) => {
+    switch (status) {
+      case 'PENDENTE':
+        return {
+          label: 'Em análise',
+          color: 'bg-yellow-100 text-yellow-800',
+          icon: <Clock className="w-4 h-4" />
+        };
+      case 'APROVADA':
+        return {
+          label: 'Aprovada',
+          color: 'bg-green-100 text-green-800',
+          icon: <CheckCircle className="w-4 h-4" />
+        };
+      case 'REPROVADA':
+        return {
+          label: 'Reprovada',
+          color: 'bg-red-100 text-red-800',
+          icon: <AlertCircle className="w-4 h-4" />
+        };
+      default:
+        return {
+          label: 'Desconhecido',
+          color: 'bg-gray-100 text-gray-800',
+          icon: <AlertCircle className="w-4 h-4" />
+        };
+    }
+  };
+
+  // Verificar se pode aplicar para avaliador
+  const canApplyForEvaluator = () => {
+    return user?.role !== 'AVALIADOR' && !evaluatorApplication;
   };
 
   // Filtrar projetos por status para orientadores
@@ -111,7 +182,7 @@ const OrientadorDashboard: React.FC = () => {
         <div className="bg-white overflow-hidden shadow rounded-lg mb-6">
           <div className="px-4 py-5 sm:p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-2">
-              Olá, Prof. {user?.name}! 🎓
+              Olá, Prof. {user?.name}!
             </h2>
             <p className="text-gray-600">
               Bem-vindo ao FEBIC! Aqui você pode acompanhar e orientar os projetos dos seus alunos.
@@ -317,6 +388,37 @@ const OrientadorDashboard: React.FC = () => {
                   <Eye className="h-5 w-5" />
                   Ver Todos os Projetos
                 </button>
+
+                {/* Botão Quero ser Avaliador */}
+                {canApplyForEvaluator() ? (
+                  <button
+                    onClick={() => setShowEvaluatorModal(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <Star className="h-5 w-5" />
+                    Quero ser Avaliador
+                  </button>
+                ) : evaluatorApplication && (
+                  <div className="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-2 mb-2">
+                      {getApplicationStatusInfo(evaluatorApplication.status).icon}
+                      <span className="text-sm font-medium text-gray-900">Candidatura a Avaliador</span>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getApplicationStatusInfo(evaluatorApplication.status).color} mb-2`}>
+                      {getApplicationStatusInfo(evaluatorApplication.status).label}
+                    </span>
+                    <p className="text-xs text-gray-600">
+                      {evaluatorApplication.status === 'PENDENTE' && 'Sua candidatura está sendo analisada'}
+                      {evaluatorApplication.status === 'APROVADA' && 'Parabéns! Sua candidatura foi aprovada'}
+                      {evaluatorApplication.status === 'REPROVADA' && 'Sua candidatura foi reprovada'}
+                    </p>
+                    {evaluatorApplication.adminNotes && (
+                      <p className="text-xs text-gray-500 mt-1 italic">
+                        "{evaluatorApplication.adminNotes}"
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -459,7 +561,7 @@ const OrientadorDashboard: React.FC = () => {
           <div className="flex">
             <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
             <div>
-              <p className="text-green-800 font-medium">✅ Sistema conectado!</p>
+              <p className="text-green-800 font-medium">Sistema conectado!</p>
               <p className="text-green-700 text-sm">
                 Você está orientando {stats?.total || 0} projeto{(stats?.total || 0) !== 1 ? 's' : ''} no FEBIC.
               </p>
@@ -468,13 +570,19 @@ const OrientadorDashboard: React.FC = () => {
         </div>
       </main>
 
-      {/* Create Form Modal */}
+      {/* Modals */}
       {showCreateForm && (
         <CreateProject
           onSubmit={handleCreateProject}
           onCancel={() => setShowCreateForm(false)}
         />
       )}
+
+      <EvaluatorApplicationModal
+        isOpen={showEvaluatorModal}
+        onClose={() => setShowEvaluatorModal(false)}
+        onSuccess={handleEvaluatorApplicationSuccess}
+      />
     </div>
   );
 };

@@ -90,6 +90,12 @@ enum InstitutionType {
   ONG
 }
 
+enum EvaluatorApplicationStatus {
+  PENDENTE
+  APROVADA
+  REPROVADA
+}
+
 model AreaConhecimento {
   id        String @id @default(cuid())
   sigla     String @unique
@@ -141,6 +147,10 @@ model User {
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  evaluatorApplications    EvaluatorApplication[] @relation("EvaluatorApplications")
+  evaluatedApplications    EvaluatorApplication[] @relation("EvaluatedApplications")
+  
 }
 
 model Project {
@@ -413,4 +423,28 @@ model AuditLog {
   userAgent String?
   
   createdAt DateTime @default(now())
+}
+
+model EvaluatorApplication {
+  id              String                    @id @default(cuid())
+  userId          String
+  motivation      String                    @db.Text
+  experience      String                    @db.Text
+  expertise       String?                   @db.Text
+  categories      String[]                  // Categorias que deseja avaliar
+  areasOfKnowledge String[]                 // Áreas de conhecimento
+  status          EvaluatorApplicationStatus @default(PENDENTE)
+  adminNotes      String?                   @db.Text
+  evaluatedAt     DateTime?
+  evaluatedBy     String?
+  
+  user            User                      @relation("EvaluatorApplications", fields: [userId], references: [id], onDelete: Cascade)
+  evaluator       User?                     @relation("EvaluatedApplications", fields: [evaluatedBy], references: [id])
+  
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }

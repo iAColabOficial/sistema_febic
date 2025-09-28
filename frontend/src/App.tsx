@@ -14,6 +14,8 @@ import Loading from './components/ui/loading';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminReports from './pages/admin/AdminReports';
 import AdminEvaluations from './pages/admin/AdminEvaluations';
+import AdminEvaluatorApplications from './components/admin/EvaluatorApplicationsAdmin';
+import ForgotPassword from './components/auth/ForgotPassword';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -48,6 +50,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<Home />} />
       <Route path="/auth/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/auth/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
+      <Route path="/auth/forgot-password" element={<ForgotPassword />} />
       
       {/* ✅ Rota do dashboard atualizada para suportar todos os roles */}
       <Route
@@ -100,6 +103,8 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
+      
+      <Route path="/admin/evaluator-applications" element={<AdminEvaluatorApplications />} />
     </Routes>
   );
 };
