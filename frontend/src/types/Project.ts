@@ -274,45 +274,45 @@ export interface ProjectStats {
 export const PROJECT_CATEGORIES = [
   {
     value: 'I' as ProjectCategory,
-    label: 'I - EducaÃ§Ã£o Infantil (3-6 anos)',
+    label: 'I - Educação Infantil (3-6 anos)',
     maxParticipants: 6,
     ageRange: '3-6 anos'
   },
   {
     value: 'II' as ProjectCategory,
-    label: 'II - Ensino Fundamental 1Âº-3Âº ano',
+    label: 'II - Ensino Fundamental 1º-3º ano',
     maxParticipants: 5,
-    ageRange: '1Âº-3Âº ano'
+    ageRange: '1º-3º ano'
   },
   {
     value: 'III' as ProjectCategory,
-    label: 'III - Ensino Fundamental 4Âº-6Âº ano',
+    label: 'III - Ensino Fundamental 4º-6º ano',
     maxParticipants: 5,
-    ageRange: '4Âº-6Âº ano'
+    ageRange: '4º-6º ano'
   },
   {
     value: 'IV' as ProjectCategory,
-    label: 'IV - Ensino Fundamental 7Âº-9Âº ano',
+    label: 'IV - Ensino Fundamental 7º-9º ano',
     maxParticipants: 3,
-    ageRange: '7Âº-9Âº ano'
+    ageRange: '7º-9º ano'
   },
   {
     value: 'V' as ProjectCategory,
-    label: 'V - Ensino MÃ©dio',
+    label: 'V - Ensino Médio',
     maxParticipants: 3,
-    ageRange: 'Ensino MÃ©dio'
+    ageRange: 'Ensino Médio'
   },
   {
     value: 'VI' as ProjectCategory,
-    label: 'VI - EducaÃ§Ã£o de Jovens e Adultos (EJA)',
+    label: 'VI - Educação de Jovens e Adultos (EJA)',
     maxParticipants: 3,
     ageRange: 'EJA'
   },
   {
     value: 'VII' as ProjectCategory,
-    label: 'VII - TÃ©cnico',
+    label: 'VII - Técnico',
     maxParticipants: 3,
-    ageRange: 'TÃ©cnico'
+    ageRange: 'Técnico'
   },
   {
     value: 'VIII' as ProjectCategory,
@@ -322,13 +322,13 @@ export const PROJECT_CATEGORIES = [
   },
   {
     value: 'IX' as ProjectCategory,
-    label: 'IX - PÃ³s-graduaÃ§Ã£o',
+    label: 'IX - Pós-graduação',
     maxParticipants: 3,
-    ageRange: 'PÃ³s-graduaÃ§Ã£o'
+    ageRange: 'Pós-graduação'
   },
   {
     value: 'RELATO' as ProjectCategory,
-    label: 'RELATO - ExperiÃªncia CientÃ­fico-PedagÃ³gica',
+    label: 'RELATO - Experiência Científico-Pedagógica',
     maxParticipants: 5,
     ageRange: 'Educadores'
   }
@@ -363,7 +363,7 @@ export const PROJECT_STATUS_INFO: Record<ProjectStatus, {
     color: 'blue'
   },
   'EM_ANALISE_CIAS': {
-    label: 'Em AnÃ¡lise CIAS',
+    label: 'Em Análise CIAS',
     description: 'Sendo avaliado pelo CIAS',
     color: 'blue'
   },
@@ -379,12 +379,12 @@ export const PROJECT_STATUS_INFO: Record<ProjectStatus, {
   },
   'AGUARDANDO_PAGAMENTO': {
     label: 'Aguardando Pagamento',
-    description: 'Aguardando confirmaÃ§Ã£o de pagamento',
+    description: 'Aguardando confirmação de pagamento',
     color: 'yellow'
   },
   'CONFIRMADO_VIRTUAL': {
     label: 'Confirmado Virtual',
-    description: 'ParticipaÃ§Ã£o virtual confirmada',
+    description: 'Participação virtual confirmada',
     color: 'blue'
   },
   'FINALISTA_PRESENCIAL': {

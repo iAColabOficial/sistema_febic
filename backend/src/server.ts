@@ -9,6 +9,7 @@ import evaluatorRoutes from './routes/evaluator';
 import forgotPasswordRoutes from './routes/forgotPassword';
 import userRoleRoutes from './routes/userRoleRoutes';
 import { authenticateWithDualRole } from './middleware/dualRoleAuth';
+import coordinatorRoutes from './routes/coordinator';
 
 
 // Configurar variáveis de ambiente PRIMEIRO
@@ -129,6 +130,11 @@ app.use('/api/users', authenticateWithDualRole, userRoleRoutes);
 
 // Rotas de projetos
 app.use('/api/projects', projectRoutes);
+
+// Coordenador de avaliação
+app.use('/api/coordinator', coordinatorRoutes);
+
+
 
 
 // Rotas de avaliações (já inclui /api)

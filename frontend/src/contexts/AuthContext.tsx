@@ -4,11 +4,20 @@ import { authService } from '../services/authService';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
+type UserRole = 
+  | 'ADMINISTRADOR'
+  | 'AUTOR'
+  | 'AVALIADOR'
+  | 'ORIENTADOR'
+  | 'FEIRA_AFILIADA'
+  | 'FINANCEIRO'
+  | 'COORDENADOR_AVALIACOES';
+  
 interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   roles?: string[]; // Array de roles para dual role
   isDualRole?: boolean;
   isOrientador?: boolean;

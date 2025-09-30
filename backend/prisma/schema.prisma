@@ -40,6 +40,7 @@ enum UserRole {
   ORIENTADOR
   FEIRA_AFILIADA
   FINANCEIRO
+  COORDENADOR_AVALIACOES
 }
 
 enum DocumentType {
