@@ -42,16 +42,15 @@ export interface Project {
   hasDisability: boolean;
   socialVulnerability: boolean;
   status: ProjectStatus;
-  ownerId: string; // âœ… ownerId (nÃ£o createdBy)
+  ownerId: string; 
   isPaid: boolean;
   paymentRequired: boolean;
   isPaymentExempt: boolean;
   exemptionReason?: string;
   submissionDate?: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt: string;  
   
-  // âœ… ADICIONADAS: Propriedades que faltavam e estavam sendo usadas nos componentes
   _count?: {
     members?: number;
     orientadores?: number;
@@ -74,6 +73,26 @@ export interface Project {
   };
   members?: ProjectMember[];
   orientadores?: ProjectOrientador[];
+  avaliacoes?: Array<{
+    id: string;
+    projectId: string;
+    avaliadorId: string;
+    isCompleted: boolean;
+    completedAt: string | null;
+    notaFinal: number | null;
+    notaInovacao: number | null;
+    notaMetodologia: number | null;
+    notaRelevancia: number | null;
+    notaApresentacao: number | null;
+    notaImpacto: number | null;
+    notaViabilidade: number | null;
+    comentarioGeral: string | null;
+    pontosFortes: string | null;
+    pontosMelhoria: string | null;
+    sugestoes: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
 }
 
 export interface ProjectMemberWithUser {

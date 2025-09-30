@@ -1,5 +1,7 @@
+// frontend/src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 
 interface User {
@@ -7,6 +9,10 @@ interface User {
   name: string;
   email: string;
   role: string;
+  roles?: string[]; // Array de roles para dual role
+  isDualRole?: boolean;
+  isOrientador?: boolean;
+  isAvaliador?: boolean;
   [key: string]: any;
 }
 
@@ -16,6 +22,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
+  refreshUserInfo: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,7 +36,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -40,7 +47,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (savedToken && savedUser) {
       try {
         setToken(savedToken);
-        setUser(JSON.parse(savedUser) as User);
+        const parsedUser = JSON.parse(savedUser) as User;
+        setUser(parsedUser);
+        
+        // Configurar token no axios para futuras requisições
+        api.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
       } catch (error) {
         console.error('Erro ao recuperar dados salvos:', error);
         localStorage.removeItem('token');
@@ -49,32 +60,100 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-  try {
-    setLoading(true);
-    
-    const response = await authService.login({ email, password });
-    
-    if (response.success && response.data) {
-      const { user: userData, token: userToken } = response.data;
+  const refreshUserInfo = async () => {
+    try {
+      const response = await api.get('/users/me/role-info');
       
-      localStorage.setItem('token', userToken);
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      // SÓ definir user em caso de sucesso
-      setUser(userData);
-      setToken(userToken);
-      
-      toast.success(`Bem-vindo(a)!`);
-      return true;
-    } else {
-      // NÃO mexer no state user em caso de falha
-      return false;
+      if (response.data.success) {
+        const roleInfo = response.data.data;
+        
+        const updatedUser: User = {
+          id: roleInfo.userId,
+          name: roleInfo.name,
+          email: roleInfo.email,
+          role: roleInfo.primaryRole,
+          roles: roleInfo.roles,
+          isDualRole: roleInfo.isDualRole,
+          isOrientador: roleInfo.isOrientador,
+          isAvaliador: roleInfo.isAvaliador
+        };
+        
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar informações do usuário:', error);
+      // Não fazer nada em caso de erro - manter o usuário atual
     }
-  } catch (error: any) {
-    console.error('Erro no login:', error);
+  };
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      setLoading(true);
       
-      // Verificar o tipo de erro e NÃO mostrar toast genérico
+      const response = await authService.login({ email, password });
+      
+      if (response.success && response.data) {
+        const { user: userData, token: userToken } = response.data;
+        
+        localStorage.setItem('token', userToken);
+        
+        // Configurar token no axios
+        api.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
+        setToken(userToken);
+        
+        // Buscar informações completas do usuário (incluindo dual role)
+        try {
+          const roleResponse = await api.get('/users/me/role-info');
+          
+          if (roleResponse.data.success) {
+            const roleInfo = roleResponse.data.data;
+            
+            const userWithRoles: User = {
+              id: roleInfo.userId,
+              name: roleInfo.name,
+              email: roleInfo.email,
+              role: roleInfo.primaryRole,
+              roles: roleInfo.roles,
+              isDualRole: roleInfo.isDualRole,
+              isOrientador: roleInfo.isOrientador,
+              isAvaliador: roleInfo.isAvaliador
+            };
+            
+            setUser(userWithRoles);
+            localStorage.setItem('user', JSON.stringify(userWithRoles));
+          } else {
+            // Fallback para userData básico se a busca de role info falhar
+            const basicUser: User = {
+              id: userData.userId || userData.id,
+              name: userData.name,
+              email: userData.email,
+              role: userData.role
+            };
+            setUser(basicUser);
+            localStorage.setItem('user', JSON.stringify(basicUser));
+          }
+        } catch (roleError) {
+          console.error('Erro ao buscar role info:', roleError);
+          // Fallback para userData básico
+          const basicUser: User = {
+            id: userData.userId || userData.id,
+            name: userData.name,
+            email: userData.email,
+            role: userData.role
+          };
+          setUser(basicUser);
+          localStorage.setItem('user', JSON.stringify(basicUser));
+        }
+        
+        toast.success(`Bem-vindo(a)!`);
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Erro no login:', error);
+      
       if (error.response?.status === 401) {
         console.log('Credenciais inválidas (401)');
       } else if (error.response?.status === 404) {
@@ -83,7 +162,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Erro de conexão ou servidor');
       }
       
-      // NÃO mostrar toast - deixar o Login.tsx cuidar da UI
       return false;
     } finally {
       setLoading(false);
@@ -94,6 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authService.logout();
     setUser(null);
     setToken(null);
+    delete api.defaults.headers.common['Authorization'];
     toast.success('Logout realizado com sucesso');
   };
 
@@ -103,6 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     loading,
+    refreshUserInfo
   };
 
   return (

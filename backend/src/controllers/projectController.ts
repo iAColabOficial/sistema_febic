@@ -364,6 +364,22 @@ function getSchoolLevelFromFormation(formation?: string | null): string {
 }
 
 // 📊 Modificar getProjects para incluir filtros de orientador
+// 📊 GET /projects - VERSÃO CORRIGIDA
+// Função auxiliar para verificar se usuário tem candidatura aprovada como avaliador
+async function isApprovedEvaluator(userId: string): Promise<boolean> {
+  try {
+    const application = await prisma.evaluatorApplication.findFirst({
+      where: {
+        userId: userId,
+        status: 'APROVADA'
+      }
+    });
+    return !!application;
+  } catch (error) {
+    console.error('Erro ao verificar candidatura de avaliador:', error);
+    return false;
+  }
+}
 export const getProjects = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
@@ -373,38 +389,106 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ success: false, message: 'Não autenticado' });
     }
 
+    console.log(`[getProjects] userId: ${userId}, role: ${userRole}`);
+
     let whereClause: any = {};
 
-    // 🎯 Filtros baseados no role do usuário
-    if (userRole === 'AUTOR') {
-      // Autor só vê projetos onde é membro OU owner
+    if (userRole === 'ADMINISTRADOR') {
+      // Admin vê todos os projetos
+      whereClause = {};
+      console.log('[getProjects] Admin - sem filtros');
+      
+    } else if (userRole === 'AVALIADOR') {
+      // Avaliador puro (se ainda existir) - só vê projetos que avalia
+      whereClause = {
+        avaliacoes: {
+          some: {
+            avaliadorId: userId
+          }
+        }
+      };
+      console.log('[getProjects] Avaliador puro');
+      
+    } else if (userRole === 'ORIENTADOR') {
+      // Verificar se também é avaliador (dual role)
+      const isEvaluator = await isApprovedEvaluator(userId);
+      
+      if (isEvaluator) {
+        // ORIENTADOR + AVALIADOR (dual role)
+        // Vê: projetos onde é orientador OU projetos que avalia OU projetos que criou
+        whereClause = {
+          OR: [
+            { ownerId: userId },
+            {
+              members: {
+                some: { userId: userId }
+              }
+            },
+            {
+              orientadores: {
+                some: { userId: userId }
+              }
+            },
+            {
+              avaliacoes: {
+                some: { avaliadorId: userId }
+              }
+            }
+          ]
+        };
+        console.log('[getProjects] Orientador com dual role (+ avaliador)');
+      } else {
+        // ORIENTADOR puro
+        whereClause = {
+          OR: [
+            { ownerId: userId },
+            {
+              members: {
+                some: { userId: userId }
+              }
+            },
+            {
+              orientadores: {
+                some: { userId: userId }
+              }
+            }
+          ]
+        };
+        console.log('[getProjects] Orientador puro');
+      }
+      
+    } else if (userRole === 'AUTOR') {
+      // AUTOR - vê projetos onde é dono ou membro
       whereClause = {
         OR: [
           { ownerId: userId },
           {
             members: {
-              some: {
-                userId: userId
-              }
+              some: { userId: userId }
             }
           }
         ]
       };
-    } else if (userRole === 'ORIENTADOR') {
-      // Orientador vê projetos onde é orientador
-      whereClause = {
-        orientadores: {
-          some: {
-            userId: userId
-          }
-        }
-      };
-    } else if (userRole === 'ADMINISTRADOR') {
-      // Admin vê todos os projetos
-      whereClause = {};
+      console.log('[getProjects] Autor');
+      
     } else {
-      // Outros roles veem apenas seus próprios projetos
-      whereClause = { ownerId: userId };
+      // Qualquer outro role - vê apenas seus próprios projetos
+      whereClause = {
+        OR: [
+          { ownerId: userId },
+          {
+            members: {
+              some: { userId: userId }
+            }
+          },
+          {
+            orientadores: {
+              some: { userId: userId }
+              }
+            }
+          ]
+      };
+      console.log('[getProjects] Outro role');
     }
 
     const projects = await prisma.project.findMany({
@@ -441,22 +525,25 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
             sigla: true,
             nome: true,
             nivel: true,
-           }
-          },
-          _count: {
-            select: {
-              members: true,
-              orientadores: true
-            }
           }
-        },  
+        },
+        _count: {
+          select: {
+            members: true,
+            orientadores: true
+          }
+        }
+      },  
       orderBy: {
-        createdAt: 'desc' }
-      });
+        createdAt: 'desc'
+      }
+    });
+
+    console.log(`[getProjects] Encontrados ${projects.length} projetos`);
 
     res.json({ success: true, data: projects });
   } catch (error) {
-    console.error('Erro ao buscar projetos:', error);
+    console.error('[getProjects] Erro:', error);
     res.status(500).json({ success: false, message: 'Erro interno' });
   }
 };
@@ -471,37 +558,94 @@ export const getProjectStats = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ success: false, message: 'Não autenticado' });
     }
 
+    console.log(`[getProjectStats] userId: ${userId}, role: ${userRole}`);
+
     let whereClause: any = {};
 
-    // Mesma lógica de filtro que getProjects
-    if (userRole === 'AUTOR') {
+    if (userRole === 'ADMINISTRADOR') {
+      whereClause = {};
+      
+    } else if (userRole === 'AVALIADOR') {
+      whereClause = {
+        avaliacoes: {
+          some: {
+            avaliadorId: userId
+          }
+        }
+      };
+      
+    } else if (userRole === 'ORIENTADOR') {
+      const isEvaluator = await isApprovedEvaluator(userId);
+      
+      if (isEvaluator) {
+        whereClause = {
+          OR: [
+            { ownerId: userId },
+            {
+              members: {
+                some: { userId: userId }
+              }
+            },
+            {
+              orientadores: {
+                some: { userId: userId }
+              }
+            },
+            {
+              avaliacoes: {
+                some: { avaliadorId: userId }
+              }
+            }
+          ]
+        };
+      } else {
+        whereClause = {
+          OR: [
+            { ownerId: userId },
+            {
+              members: {
+                some: { userId: userId }
+              }
+            },
+            {
+              orientadores: {
+                some: { userId: userId }
+              }
+            }
+          ]
+        };
+      }
+      
+    } else if (userRole === 'AUTOR') {
       whereClause = {
         OR: [
           { ownerId: userId },
           {
             members: {
-              some: {
-                userId: userId
-              }
+              some: { userId: userId }
             }
           }
         ]
       };
-    } else if (userRole === 'ORIENTADOR') {
-      whereClause = {
-        orientadores: {
-          some: {
-            userId: userId
-          }
-        }
-      };
-    } else if (userRole === 'ADMINISTRADOR') {
-      whereClause = {};
+      
     } else {
-      whereClause = { ownerId: userId };
+      whereClause = {
+        OR: [
+          { ownerId: userId },
+          {
+            members: {
+              some: { userId: userId }
+            }
+          },
+          {
+            orientadores: {
+              some: { userId: userId }
+            }
+          }
+        ]
+      };
     }
 
-    // Buscar estatísticas
     const [total, byStatus] = await Promise.all([
       prisma.project.count({ where: whereClause }),
       prisma.project.groupBy({
@@ -511,7 +655,6 @@ export const getProjectStats = async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    // Formatar estatísticas por status
     const statusStats = byStatus.reduce((acc, item) => {
       acc[item.status] = item._count;
       return acc;
@@ -522,9 +665,11 @@ export const getProjectStats = async (req: AuthRequest, res: Response) => {
       byStatus: statusStats
     };
 
+    console.log(`[getProjectStats] Total: ${total}`);
+
     res.json({ success: true, data: stats });
   } catch (error) {
-    console.error('Erro ao buscar estatísticas:', error);
+    console.error('[getProjectStats] Erro:', error);
     res.status(500).json({ success: false, message: 'Erro interno' });
   }
 };
@@ -544,17 +689,19 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ success: false, message: 'ID inválido' });
     }
 
-    // Para administradores, incluir TUDO
+    console.log(`[getProjectById] ID: ${projectId}, userId: ${userId}, role: ${userRole}`);
+
+    // ADMIN tem acesso total
     if (userRole === 'ADMINISTRADOR') {
       const project = await prisma.project.findUnique({
         where: { id: projectId },
         include: {
-          owner: true, // Todos os campos do owner
-          members: true, // Todos os campos dos membros
-          orientadores: true, // Todos os campos dos orientadores
+          owner: true,
+          members: true,
+          orientadores: true,
           areaConhecimento: true,
-          documents: true, // INCLUIR DOCUMENTOS
-          avaliacoes: { // INCLUIR AVALIAÇÕES
+          documents: true,
+          avaliacoes: {
             include: {
               avaliador: {
                 select: {
@@ -564,8 +711,8 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
               }
             }
           },
-          pagamentos: true, // INCLUIR PAGAMENTOS
-          awards: true // INCLUIR PRÊMIOS
+          pagamentos: true,
+          awards: true
         }
       });
 
@@ -573,34 +720,93 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
         return res.status(404).json({ success: false, message: 'Projeto não encontrado' });
       }
 
+      console.log('[getProjectById] Admin - projeto encontrado');
       return res.json({ success: true, data: project });
     }
 
-    // Para outros usuários, manter a validação de acesso existente
+    // Para outros usuários, montar whereClause baseado no role
     let whereClause: any = { id: projectId };
 
-    if (userRole === 'AUTOR') {
+    if (userRole === 'AVALIADOR') {
+      whereClause = {
+        id: projectId,
+        avaliacoes: {
+          some: {
+            avaliadorId: userId
+          }
+        }
+      };
+    } else if (userRole === 'ORIENTADOR') {
+      const isEvaluator = await isApprovedEvaluator(userId);
+      
+      if (isEvaluator) {
+        whereClause = {
+          id: projectId,
+          OR: [
+            { ownerId: userId },
+            {
+              members: {
+                some: { userId: userId }
+              }
+            },
+            {
+              orientadores: {
+                some: { userId: userId }
+              }
+            },
+            {
+              avaliacoes: {
+                some: { avaliadorId: userId }
+              }
+            }
+          ]
+        };
+      } else {
+        whereClause = {
+          id: projectId,
+          OR: [
+            { ownerId: userId },
+            {
+              members: {
+                some: { userId: userId }
+              }
+            },
+            {
+              orientadores: {
+                some: { userId: userId }
+              }
+            }
+          ]
+        };
+      }
+    } else if (userRole === 'AUTOR') {
       whereClause = {
         id: projectId,
         OR: [
           { ownerId: userId },
           {
             members: {
-              some: {
-                userId: userId
-              }
+              some: { userId: userId }
             }
           }
         ]
       };
-    } else if (userRole === 'ORIENTADOR') {
+    } else {
       whereClause = {
         id: projectId,
-        orientadores: {
-          some: {
-            userId: userId
+        OR: [
+          { ownerId: userId },
+          {
+            members: {
+              some: { userId: userId }
+            }
+          },
+          {
+            orientadores: {
+              some: { userId: userId }
+            }
           }
-        }
+        ]
       };
     }
 
@@ -617,17 +823,19 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
         members: true,
         orientadores: true,
         areaConhecimento: true,
-        documents: true // Permitir que autores vejam seus documentos
+        documents: true
       }
     });
     
     if (!project) {
+      console.log('[getProjectById] Projeto não encontrado ou sem acesso');
       return res.status(404).json({ success: false, message: 'Projeto não encontrado' });
     }
 
+    console.log('[getProjectById] Projeto encontrado');
     res.json({ success: true, data: project });
   } catch (error) {
-    console.error('Erro ao buscar projeto:', error);
+    console.error('[getProjectById] Erro:', error);
     res.status(500).json({ success: false, message: 'Erro interno' });
   }
 };

@@ -1,4 +1,4 @@
-// frontend/src/components/dashboard/OrientadorDashboard.tsx (versão atualizada)
+// frontend/src/pages/dashboard/OrientadorDashboard.tsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProjects, useProjectStats } from '../../hooks/useProjects';
@@ -18,7 +18,8 @@ import {
   AlertTriangle,
   Plus,
   Star,
-  AlertCircle
+  AlertCircle,
+  ClipboardList
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CreateProject from '../projects/CreateProject';
@@ -33,22 +34,37 @@ interface EvaluatorApplication {
   adminNotes?: string;
 }
 
+interface EvaluatorStats {
+  totalEvaluations: number;
+  pendingEvaluations: number;
+  completedEvaluations: number;
+}
+
 const OrientadorDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const { stats, loading: statsLoading } = useProjectStats();
-  const { projects, loading: projectsLoading } = useProjects({ limit: 10 });
-  const { createProject } = useProjects();
+  const { projects, loading: projectsLoading, createProject } = useProjects({ limit: 10 });
   
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEvaluatorModal, setShowEvaluatorModal] = useState(false);
   const [evaluatorApplication, setEvaluatorApplication] = useState<EvaluatorApplication | null>(null);
+  const [evaluatorStats, setEvaluatorStats] = useState<EvaluatorStats | null>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
+  const [loadingEvaluatorStats, setLoadingEvaluatorStats] = useState(false);
+  const [isAlsoEvaluator, setIsAlsoEvaluator] = useState(false);
+
   const navigate = useNavigate();
 
-  // Buscar status da candidatura a avaliador
   useEffect(() => {
     fetchEvaluatorApplicationStatus();
+    checkIfIsEvaluator();
   }, []);
+
+  useEffect(() => {
+    if (isAlsoEvaluator) {
+      fetchEvaluatorStats();
+    }
+  }, [isAlsoEvaluator]);
 
   const fetchEvaluatorApplicationStatus = async () => {
     try {
@@ -61,6 +77,36 @@ const OrientadorDashboard: React.FC = () => {
       console.error('Erro ao buscar status da candidatura:', error);
     } finally {
       setLoadingApplication(false);
+    }
+  };
+
+  const checkIfIsEvaluator = async () => {
+    try {
+      const response = await api.get('/evaluations/my-evaluations');
+      if (response.data && response.data.length > 0) {
+        setIsAlsoEvaluator(true);
+      }
+    } catch (error) {
+      setIsAlsoEvaluator(false);
+    }
+  };
+
+  const fetchEvaluatorStats = async () => {
+    try {
+      setLoadingEvaluatorStats(true);
+      const response = await api.get('/evaluations/my-evaluations');
+      if (response.data) {
+        const evaluations = response.data;
+        setEvaluatorStats({
+          totalEvaluations: evaluations.length,
+          pendingEvaluations: evaluations.filter((e: any) => !e.isCompleted).length,
+          completedEvaluations: evaluations.filter((e: any) => e.isCompleted).length
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas de avaliador:', error);
+    } finally {
+      setLoadingEvaluatorStats(false);
     }
   };
 
@@ -79,6 +125,11 @@ const OrientadorDashboard: React.FC = () => {
 
   const handleEvaluatorApplicationSuccess = () => {
     fetchEvaluatorApplicationStatus();
+    checkIfIsEvaluator();
+  };
+
+  const handleGoToEvaluatorDashboard = () => {
+    navigate('/dashboard/evaluator');
   };
 
   const formatDate = (dateString: string) => {
@@ -91,7 +142,7 @@ const OrientadorDashboard: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     const statusInfo = getProjectStatusInfo(status as any);
-    const colorMap = {
+    const colorMap: Record<string, string> = {
       gray: 'bg-gray-100 text-gray-800',
       blue: 'bg-blue-100 text-blue-800',
       green: 'bg-green-100 text-green-800',
@@ -131,12 +182,16 @@ const OrientadorDashboard: React.FC = () => {
     }
   };
 
-  // Verificar se pode aplicar para avaliador
   const canApplyForEvaluator = () => {
     return user?.role !== 'AVALIADOR' && !evaluatorApplication;
   };
 
-  // Filtrar projetos por status para orientadores
+  const isActiveEvaluator = () => {
+    return user?.role === 'AVALIADOR' || 
+           evaluatorApplication?.status === 'APROVADA' || 
+           isAlsoEvaluator;
+  };
+
   const projectsPendingEvaluation = projects?.filter(p => 
     p.status === 'SUBMETIDO' || p.status === 'EM_ANALISE_CIAS'
   ) || [];
@@ -158,12 +213,35 @@ const OrientadorDashboard: React.FC = () => {
             <div>
               <h1 className="text-xl font-semibold text-gray-900">
                 Painel do Orientador
+                {isActiveEvaluator() && (
+                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    <Star className="w-3 h-3 mr-1" />
+                    Avaliador
+                  </span>
+                )}
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              {isActiveEvaluator() && (
+                <button
+                  onClick={handleGoToEvaluatorDashboard}
+                  className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                >
+                  <ClipboardList className="w-4 h-4" />
+                  Minhas Avaliações
+                  {evaluatorStats?.pendingEvaluations && evaluatorStats.pendingEvaluations > 0 && (
+                    <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {evaluatorStats.pendingEvaluations}
+                    </span>
+                  )}
+                </button>
+              )}
+              
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">Orientador</p>
+                <p className="text-xs text-gray-500">
+                  Orientador{isActiveEvaluator() ? ' • Avaliador' : ''}
+                </p>
               </div>
               <button
                 onClick={logout}
@@ -185,12 +263,13 @@ const OrientadorDashboard: React.FC = () => {
               Olá, Prof. {user?.name}!
             </h2>
             <p className="text-gray-600">
-              Bem-vindo ao FEBIC! Aqui você pode acompanhar e orientar os projetos dos seus alunos.
+              Bem-vindo ao FEBIC! Aqui você pode acompanhar e orientar os projetos dos seus alunos
+              {isActiveEvaluator() && ', e também avaliar projetos de outros participantes'}.
             </p>
           </div>
         </div>
 
-        {/* Stats Cards - Específicas para Orientadores */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="p-5">
@@ -273,8 +352,53 @@ const OrientadorDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* Stats adicionais de Avaliador */}
+        {isActiveEvaluator() && evaluatorStats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="bg-purple-50 overflow-hidden shadow rounded-lg border border-purple-200">
+              <div className="p-5">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <ClipboardList className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-purple-600 truncate">
+                        Avaliações Atribuídas
+                      </dt>
+                      <dd className="text-lg font-medium text-purple-900">
+                        {loadingEvaluatorStats ? '...' : evaluatorStats.totalEvaluations}
+                      </dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-orange-50 overflow-hidden shadow rounded-lg border border-orange-200">
+              <div className="p-5">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <Clock className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-orange-600 truncate">
+                        Avaliações Pendentes
+                      </dt>
+                      <dd className="text-lg font-medium text-orange-900">
+                        {loadingEvaluatorStats ? '...' : evaluatorStats.pendingEvaluations}
+                      </dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Projetos Pendentes de Avaliação */}
+          {/* Projetos Pendentes */}
           <div className="lg:col-span-2">
             <div className="bg-white shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
@@ -367,9 +491,8 @@ const OrientadorDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Sidebar - Actions & Info */}
+          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Create Project Button */}
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Ações Rápidas</h3>
               <div className="space-y-3">
@@ -387,9 +510,23 @@ const OrientadorDashboard: React.FC = () => {
                 >
                   <Eye className="h-5 w-5" />
                   Ver Todos os Projetos
-                </button>
+                </button>                
 
-                {/* Botão Quero ser Avaliador */}
+                {isActiveEvaluator() && (
+                  <button
+                    onClick={handleGoToEvaluatorDashboard}
+                    className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors relative"
+                  >
+                    <ClipboardList className="h-5 w-5" />
+                    Minhas Avaliações
+                    {evaluatorStats?.pendingEvaluations && evaluatorStats.pendingEvaluations > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {evaluatorStats.pendingEvaluations}
+                      </span>
+                    )}
+                  </button>
+                )}
+
                 {canApplyForEvaluator() ? (
                   <button
                     onClick={() => setShowEvaluatorModal(true)}
@@ -398,7 +535,7 @@ const OrientadorDashboard: React.FC = () => {
                     <Star className="h-5 w-5" />
                     Quero ser Avaliador
                   </button>
-                ) : evaluatorApplication && (
+                ) : evaluatorApplication && user?.role !== 'AVALIADOR' && (
                   <div className="p-3 border border-gray-200 rounded-lg bg-gray-50">
                     <div className="flex items-center gap-2 mb-2">
                       {getApplicationStatusInfo(evaluatorApplication.status).icon}
@@ -440,6 +577,20 @@ const OrientadorDashboard: React.FC = () => {
                   <span className="text-sm text-gray-600">Avaliações pendentes</span>
                   <span className="text-sm font-medium text-orange-600">{projectsPendingEvaluation.length}</span>
                 </div>
+                
+                {isActiveEvaluator() && evaluatorStats && (
+                  <>
+                    <hr className="my-4" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-purple-600">Como avaliador</span>
+                      <span className="text-sm font-medium text-purple-600">{evaluatorStats.totalEvaluations}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-purple-600">Avaliações pendentes</span>
+                      <span className="text-sm font-medium text-orange-600">{evaluatorStats.pendingEvaluations}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -463,99 +614,6 @@ const OrientadorDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* All Projects Section */}
-        <div className="mt-8 bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-gray-900">
-                Todos os Projetos Orientados
-              </h3>
-              <button
-                onClick={() => navigate('/projects')}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
-              >
-                <Eye className="w-4 h-4" />
-                Ver todos
-              </button>
-            </div>
-
-            {projectsLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="h-16 bg-gray-200 rounded-lg"></div>
-                  </div>
-                ))}
-              </div>
-            ) : projects && projects.length > 0 ? (
-              <div className="space-y-3">
-                {projects.slice(0, 8).map((project) => (
-                  <div
-                    key={project.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer group"
-                    onClick={() => handleViewProject(project)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
-                            {project.title}
-                          </h4>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
-                            {getProjectStatusInfo(project.status as any)?.label}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            <span>{project.members?.length || 0} integrante(s)</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            <span>Criado em {formatDate(project.createdAt)}</span>
-                          </div>
-                          
-                          {project.areaConhecimento && (
-                            <div className="flex items-center gap-1">
-                              <Tag className="w-3 h-3" />
-                              <span>{project.areaConhecimento.nome}</span>
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center gap-1">
-                            <FileText className="w-3 h-3" />
-                            <span>Categoria {project.category}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <GraduationCap className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Nenhum projeto orientado ainda
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Comece criando um projeto para seus alunos ou aguarde que eles o adicionem como orientador.
-                </p>
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Criar Primeiro Projeto
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Success Message */}
         <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex">
@@ -563,7 +621,8 @@ const OrientadorDashboard: React.FC = () => {
             <div>
               <p className="text-green-800 font-medium">Sistema conectado!</p>
               <p className="text-green-700 text-sm">
-                Você está orientando {stats?.total || 0} projeto{(stats?.total || 0) !== 1 ? 's' : ''} no FEBIC.
+                Você está orientando {stats?.total || 0} projeto{(stats?.total || 0) !== 1 ? 's' : ''} no FEBIC
+                {isActiveEvaluator() && evaluatorStats && `, e tem ${evaluatorStats.totalEvaluations} projeto${evaluatorStats.totalEvaluations !== 1 ? 's' : ''} para avaliar`}.
               </p>
             </div>
           </div>

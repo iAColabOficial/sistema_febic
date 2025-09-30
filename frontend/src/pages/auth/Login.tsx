@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, ArrowLeft, LogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,27 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showError, setShowError] = useState(false);
   
-  const { login, loading } = useAuth();
+  const { login, loading, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirecionar se já estiver logado
+  useEffect(() => {
+    if (user) {
+      redirectToDashboard(user.role);
+    }
+  }, [user]);
+
+  const redirectToDashboard = (role: string) => {
+    const dashboardRoutes: Record<string, string> = {
+      'ADMINISTRADOR': '/dashboard/admin',
+      'AUTOR': '/dashboard/author',
+      'ORIENTADOR': '/dashboard/orientador',
+      'AVALIADOR': '/dashboard/evaluator'
+    };
+    
+    const redirectTo = dashboardRoutes[role] || '/dashboard';
+    navigate(redirectTo, { replace: true });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +46,15 @@ const Login: React.FC = () => {
 
     const success = await login(formData.email, formData.password);
     
-    if (!success) {
+    if (success) {
+      // O useEffect vai cuidar do redirecionamento quando user for atualizado
+      // Mas como fallback, vamos redirecionar aqui também
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        const userData = JSON.parse(savedUser);
+        redirectToDashboard(userData.role);
+      }
+    } else {
       setShowError(true);
     }
   };
@@ -61,7 +90,6 @@ const Login: React.FC = () => {
             </p>
           </div>
 
-          {/* ERRO COM CSS INLINE FORÇADO */}
           {showError && (
           <div style={{
             backgroundColor: '#fee2e2',

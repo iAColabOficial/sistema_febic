@@ -1,123 +1,142 @@
+// frontend/src/App.tsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Home from './pages/Home';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+
+// Auth pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+
+// Dashboard pages
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import AuthorDashboard from './pages/dashboard/AuthorDashboard';
-import OrientadorDashboard from './pages/dashboard/OrientadorDashboard';
+import UnifiedDashboard from './pages/dashboard/UnifiedDashboard';
+import EvaluatorDashboard from './pages/dashboard/EvaluatorDashboard';
+
+// Project pages
+import CreateProject from './pages/projects/CreateProject';
 import ProjectsList from './pages/projects/ProjectsList';
-import EditProject from './pages/projects/EditProject';
-import Loading from './components/ui/loading';
+
+// Admin pages
 import AdminUsers from './pages/admin/AdminUsers';
-import AdminReports from './pages/admin/AdminReports';
 import AdminEvaluations from './pages/admin/AdminEvaluations';
-import AdminEvaluatorApplications from './components/admin/EvaluatorApplicationsAdmin';
-import ForgotPassword from './components/auth/ForgotPassword';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuth();
+import ViewProject from './pages/projects/ViewProject';
 
-  if (loading) return <Loading />;
-  if (!user) return <Navigate to="/auth/login" replace />;
-  return <>{children}</>;
-};
+// Home
+import Home from './pages/Home';
 
-// 🎯 Função para determinar qual dashboard mostrar baseado no role
-const getDashboardComponent = (userRole: string) => {
-  switch (userRole) {
-    case 'ADMINISTRADOR':
-      return <AdminDashboard />;
-    case 'ORIENTADOR':
-      return <OrientadorDashboard />;
-    case 'AUTOR':
-      return <AuthorDashboard />;
-    default:
-      // Default para casos não previstos (AVALIADOR, FEIRA_AFILIADA, etc.)
-      return <AuthorDashboard />;
-  }
-};
-
-const AppRoutes: React.FC = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) return <Loading />;
-
-  return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/auth/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
-      <Route path="/auth/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
-      <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-      
-      {/* ✅ Rota do dashboard atualizada para suportar todos os roles */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            {getDashboardComponent(user?.role || 'AUTOR')}
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/projects"
-        element={
-          <ProtectedRoute>
-            <ProjectsList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/projects/edit/:id"
-        element={
-          <ProtectedRoute>
-            <EditProject />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/users"
-        element={
-          <ProtectedRoute>
-            {user?.role === 'ADMINISTRADOR' ? <AdminUsers /> : <Navigate to="/dashboard" replace />}
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/reports"
-        element={
-          <ProtectedRoute>
-            {user?.role === 'ADMINISTRADOR' ? <AdminReports /> : <Navigate to="/dashboard" replace />}
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/evaluations"
-        element={
-          <ProtectedRoute>
-            {user?.role === 'ADMINISTRADOR' ? <AdminEvaluations /> : <Navigate to="/dashboard" replace />}
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-      
-      <Route path="/admin/evaluator-applications" element={<AdminEvaluatorApplications />} />
-    </Routes>
-  );
-};
-
-const App: React.FC = () => {
+function App() {
   return (
     <AuthProvider>
       <Router>
-        <AppRoutes />
-        <Toaster position="top-right" />
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/" element={<Home />} />
+
+          {/* Protected routes - Admin */}
+          <Route
+            path="/dashboard/admin"
+            element={
+              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+                <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/evaluations"
+            element={
+              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+                <AdminEvaluations />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected routes - Author */}
+          <Route
+            path="/dashboard/author"
+            element={
+              <ProtectedRoute allowedRoles={['AUTOR']}>
+                <AuthorDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected routes - Orientador (Unified Dashboard) */}
+          <Route
+            path="/dashboard/orientador"
+            element={
+              <ProtectedRoute allowedRoles={['ORIENTADOR']}>
+                <UnifiedDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected routes - Evaluator (pode ser acessado via Unified ou direto) */}
+          <Route
+            path="/dashboard/evaluator"
+            element={
+              <ProtectedRoute allowedRoles={['AVALIADOR', 'ORIENTADOR']}>
+                <EvaluatorDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* A visualização de projetos é feita dentro dos dashboards específicos */}
+          {/* CreateProject é usado como modal, não como rota */}
+
+          {/* Redirect root based on role */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['ADMINISTRADOR', 'AUTOR', 'ORIENTADOR', 'AVALIADOR']}>
+                <DashboardRedirect />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Catch all - redirect to login */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route
+            path="/projects/:id"
+            element={
+              <ProtectedRoute>
+                <ViewProject />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
       </Router>
     </AuthProvider>
   );
+}
+
+// Component to redirect to appropriate dashboard based on role
+const DashboardRedirect: React.FC = () => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  if (user.role === 'ADMINISTRADOR') {
+    return <Navigate to="/dashboard/admin" replace />;
+  } else if (user.role === 'AUTOR') {
+    return <Navigate to="/dashboard/author" replace />;
+  } else if (user.role === 'ORIENTADOR') {
+    return <Navigate to="/dashboard/orientador" replace />;
+  } else if (user.role === 'AVALIADOR') {
+    return <Navigate to="/dashboard/evaluator" replace />;
+  }
+  
+  return <Navigate to="/login" replace />;
 };
 
 export default App;

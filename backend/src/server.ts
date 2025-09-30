@@ -7,6 +7,8 @@ import fs from 'fs';
 import adminRoutes from './routes/admin';
 import evaluatorRoutes from './routes/evaluator';
 import forgotPasswordRoutes from './routes/forgotPassword';
+import userRoleRoutes from './routes/userRoleRoutes';
+import { authenticateWithDualRole } from './middleware/dualRoleAuth';
 
 
 // Configurar variáveis de ambiente PRIMEIRO
@@ -16,7 +18,7 @@ dotenv.config();
 import authRoutes from './routes/auth';
 import projectRoutes from './routes/projects';
 import documentRoutes from './routes/documents';
-// import evaluationRoutes from './routes/evaluations'; // TODO: Criar quando implementar avaliações
+import evaluationRoutes from './routes/evaluations';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -117,9 +119,16 @@ app.use('/api/admin', adminRoutes);
 
 app.use('/api/evaluator', evaluatorRoutes);
 
-
+app.use('/api/evaluations', evaluationRoutes);
+console.log(`⭐ Evaluations: http://localhost:${PORT}/api/evaluations`);
 
 app.use('/api/auth/forgot-password', forgotPasswordRoutes);
+
+// Rotas de role info (NOVO - adicionar aqui)
+app.use('/api/users', authenticateWithDualRole, userRoleRoutes);
+
+// Rotas de projetos
+app.use('/api/projects', projectRoutes);
 
 
 // Rotas de avaliações (já inclui /api)

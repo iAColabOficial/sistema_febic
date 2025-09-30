@@ -61,9 +61,12 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSa
     }
 
     // Validação de CPF (formato básico)
-    if (formData.cpf && !/^\d{11}$/.test(formData.cpf.replace(/\D/g, ''))) {
-      newErrors.cpf = 'CPF deve conter 11 dígitos';
-    }
+    const validateCPF = (cpf: string) => {
+      const digits = cpf.replace(/\D/g, '');
+      if (digits.length !== 11) return false;
+      // Adicionar lógica de validação dos dígitos verificadores
+      return true;
+    };
 
     // Validação de telefone (formato básico)
     if (formData.phone && !/^\(\d{2}\)\s\d{4,5}-\d{4}$/.test(formData.phone)) {
