@@ -65,29 +65,28 @@ export const ManualDistribution: React.FC<ManualDistributionProps> = ({
 
   // Buscar projetos disponíveis para distribuição
   const fetchProjects = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/coordinator/projects/distribution');
-      setProjects(response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao carregar projetos');
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    const response = await api.get('/coordinator/projects/distribution');
+    setProjects(response.data.projects || []);  // ✅ CORRIGIDO
+  } catch (err: any) {
+    setError(err.response?.data?.message || 'Erro ao carregar projetos');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  // Buscar avaliadores disponíveis
-  const fetchEvaluators = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/coordinator/evaluators/available');
-      setEvaluators(response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao carregar avaliadores');
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchEvaluators = async () => {
+  try {
+    setLoading(true);
+    const response = await api.get('/coordinator/evaluators/available');
+    setEvaluators(response.data);  // ✅ JÁ ESTÁ CORRETO
+  } catch (err: any) {
+    setError(err.response?.data?.message || 'Erro ao carregar avaliadores');
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchProjects();

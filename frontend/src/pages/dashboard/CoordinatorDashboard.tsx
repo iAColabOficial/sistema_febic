@@ -5,8 +5,11 @@ import {
   BarChart3, 
   Users, 
   Zap,
-  List
+  List,
+  LogOut,
+  Target
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import { useCoordinator } from '../../hooks/useCoordinator';
 import { DistributionStats } from '../../components/coordinator/DistributionStats';
 import { ManualDistribution } from '../../components/coordinator/ManualDistribution';
@@ -16,6 +19,7 @@ import { Button } from '../../components/ui/button';
 type TabType = 'overview' | 'manual' | 'auto' | 'management';
 
 export const CoordinatorDashboard: React.FC = () => {
+  const { user, logout } = useAuth();
   const { stats, report, loading, error, refreshData } = useCoordinator();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -39,22 +43,41 @@ export const CoordinatorDashboard: React.FC = () => {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Dashboard do Coordenador
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Gerenciamento e distribuição de avaliações
-              </p>
+            <div className="flex items-center space-x-4">
+              <Target className="w-8 h-8 text-indigo-600" />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Dashboard do Coordenador
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Gerenciamento e distribuição de avaliações
+                </p>
+              </div>
             </div>
-            <Button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Atualizar
-            </Button>
+            
+            <div className="flex items-center space-x-4">
+              <Button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                <p className="text-xs text-gray-500">Coordenador de Avaliações</p>
+              </div>
+              
+              <button
+                onClick={logout}
+                className="flex items-center text-gray-600 hover:text-red-600 transition-colors p-2 border border-gray-300 rounded-lg hover:border-red-300"
+                title="Sair"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}

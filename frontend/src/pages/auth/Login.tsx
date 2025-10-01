@@ -105,7 +105,7 @@ const Login: React.FC = () => {
             <div>
               <span style={{ fontWeight: '500', display: 'block' }}>Email ou senha incorretos</span>
               <Link 
-                to="/auth/forgot-password" 
+                to="/forgot-password" 
                 style={{ 
                   fontSize: '12px', 
                   color: '#dc2626', 
@@ -187,7 +187,7 @@ const Login: React.FC = () => {
                 </label>
               </div>
               <Link
-                to="/auth/forgot-password"
+                to="/forgot-password"
                 className="text-sm text-primary-600 hover:text-primary-500 transition-colors font-medium"
               >
                 Esqueceu a senha?
@@ -228,7 +228,7 @@ const Login: React.FC = () => {
             <p className="text-sm text-gray-600">
               Não tem uma conta?{' '}
               <Link 
-                to="/auth/register" 
+                to="/register"
                 className="font-medium text-primary-600 hover:text-primary-500 transition-colors"
               >
                 Criar conta
