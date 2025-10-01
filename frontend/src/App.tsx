@@ -1,7 +1,7 @@
 // frontend/src/App.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Auth pages
@@ -13,6 +13,7 @@ import AdminDashboard from './pages/dashboard/AdminDashboard';
 import AuthorDashboard from './pages/dashboard/AuthorDashboard';
 import UnifiedDashboard from './pages/dashboard/UnifiedDashboard';
 import EvaluatorDashboard from './pages/dashboard/EvaluatorDashboard';
+import { CoordinatorDashboard } from './pages/dashboard/CoordinatorDashboard';
 
 // Project pages
 import CreateProject from './pages/projects/CreateProject';
@@ -63,6 +64,16 @@ function App() {
             }
           />
 
+          {/* Protected routes - Coordinator */}
+          <Route
+            path="/dashboard/coordinator"
+            element={
+              <ProtectedRoute allowedRoles={['COORDENADOR_AVALIACOES']}>
+                <CoordinatorDashboard />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Protected routes - Author */}
           <Route
             path="/dashboard/author"
@@ -83,7 +94,7 @@ function App() {
             }
           />
 
-          {/* Protected routes - Evaluator (pode ser acessado via Unified ou direto) */}
+          {/* Protected routes - Evaluator */}
           <Route
             path="/dashboard/evaluator"
             element={
@@ -93,21 +104,7 @@ function App() {
             }
           />
 
-          {/* A visualização de projetos é feita dentro dos dashboards específicos */}
-          {/* CreateProject é usado como modal, não como rota */}
-
-          {/* Redirect root based on role */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={['ADMINISTRADOR', 'AUTOR', 'ORIENTADOR', 'AVALIADOR']}>
-                <DashboardRedirect />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Catch all - redirect to login */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* Project view */}
           <Route
             path="/projects/:id"
             element={
@@ -116,6 +113,19 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Redirect root based on role */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['ADMINISTRADOR', 'AUTOR', 'ORIENTADOR', 'AVALIADOR', 'COORDENADOR_AVALIACOES']}>
+                <DashboardRedirect />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Catch all - redirect to login */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
@@ -124,7 +134,26 @@ function App() {
 
 // Component to redirect to appropriate dashboard based on role
 const DashboardRedirect: React.FC = () => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const { user } = useAuth();
+  const [hasRedirected, setHasRedirected] = useState(false);
+  
+  useEffect(() => {
+    setHasRedirected(true);
+  }, []);
+
+  // Aguarda carregamento do usuário
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Previne múltiplos redirects
+  if (!hasRedirected) {
+    return null;
+  }
   
   if (user.role === 'ADMINISTRADOR') {
     return <Navigate to="/dashboard/admin" replace />;
@@ -134,6 +163,8 @@ const DashboardRedirect: React.FC = () => {
     return <Navigate to="/dashboard/orientador" replace />;
   } else if (user.role === 'AVALIADOR') {
     return <Navigate to="/dashboard/evaluator" replace />;
+  } else if (user.role === 'COORDENADOR_AVALIACOES') {
+    return <Navigate to="/dashboard/coordinator" replace />;
   }
   
   return <Navigate to="/login" replace />;

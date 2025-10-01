@@ -1,14 +1,15 @@
 // backend/src/middleware/coordinatorAuth.ts
 import { Request, Response, NextFunction } from 'express';
-import { UserRole } from '@prisma/client';
 
 interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
-    role: UserRole;
+    role: string; // ← String ao invés de UserRole enum
   };
 }
+
+const ALLOWED_ROLES = ['COORDENADOR_AVALIACOES', 'ADMINISTRADOR'];
 
 export const coordinatorOnly = (
   req: AuthRequest,
@@ -17,20 +18,18 @@ export const coordinatorOnly = (
 ) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Não autenticado' });
+      return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // Permite acesso se for COORDENADOR_AVALIACOES ou ADMINISTRADOR
-    if (req.user.role !== UserRole.COORDENADOR_AVALIACOES && 
-        req.user.role !== UserRole.ADMINISTRADOR) {
+    if (!ALLOWED_ROLES.includes(req.user.role)) {
       return res.status(403).json({ 
-        error: 'Acesso negado. Apenas coordenadores de avaliação podem acessar este recurso.' 
+        error: 'Access denied. Only evaluation coordinators can access this resource.' 
       });
     }
 
     next();
   } catch (error) {
-    console.error('Erro no middleware coordinatorOnly:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error('Error in coordinatorOnly middleware:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
