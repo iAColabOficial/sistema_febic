@@ -1,4 +1,3 @@
-// backend/src/middleware/coordinatorAuth.ts
 import { Request, Response, NextFunction } from 'express';
 
 interface AuthRequest extends Request {

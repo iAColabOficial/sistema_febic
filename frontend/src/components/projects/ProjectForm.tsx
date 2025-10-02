@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
 import { CreateProjectData, UpdateProjectData, PROJECT_CATEGORIES, Project } from '../../types/Project';
+import { FeiraCredencialSelector } from './FeiraCredencialSelector';
 
 interface ProjectFormProps {
-  project?: Project; // Para modo de edição
+  project?: Project;
   onSubmit: (data: CreateProjectData | UpdateProjectData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -17,25 +18,44 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   loading = false 
 }) => {
   const isEditing = !!project;
+  const [feiraAfiliadaId, setFeiraAfiliadaId] = useState<string | null>(
+    project?.feiraAfiliadaId || null
+  );
   
-  // ✅ CORRIGIDO: Usando campos em inglês consistente com os tipos
   const { register, handleSubmit, formState: { errors }, watch } = useForm<CreateProjectData>({
     defaultValues: isEditing ? {
-      title: project.title, // ✅ CORRIGIDO: title ao invés de titulo
-      category: project.category, // ✅ CORRIGIDO: category ao invés de categoria
-      summary: project.summary // ✅ CORRIGIDO: summary ao invés de resumo
+      title: project.title,
+      category: project.category,
+      summary: project.summary,
+      objective: project.objective,
+      methodology: project.methodology,
+      areaConhecimentoId: project.areaConhecimentoId,
+      institution: project.institution,
+      institutionCity: project.institutionCity,
+      institutionState: project.institutionState,
     } : {
-      title: '', // ✅ CORRIGIDO: title ao invés de titulo
-      category: '', // ✅ CORRIGIDO: category ao invés de categoria
-      summary: '' // ✅ CORRIGIDO: summary ao invés de resumo/abstract
+      title: '',
+      category: '',
+      summary: '',
+      objective: '',
+      methodology: '',
+      areaConhecimentoId: '',
+      institution: '',
+      institutionCity: '',
+      institutionState: '',
     }
   });
 
-  // ✅ CORRIGIDO: Usando campo correto
   const watchedSummary = watch('summary', '');
 
   const onFormSubmit = async (data: CreateProjectData) => {
-    await onSubmit(data);
+    // Adiciona feiraAfiliadaId aos dados se selecionado
+    const submitData = {
+      ...data,
+      ...(feiraAfiliadaId && { feiraAfiliadaId })
+    };
+    
+    await onSubmit(submitData);
   };
 
   return (
@@ -55,6 +75,16 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           </div>
 
           <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+            {/* Feira Credencial - NOVO */}
+            {!isEditing && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <FeiraCredencialSelector
+                  value={feiraAfiliadaId || undefined}
+                  onChange={setFeiraAfiliadaId}
+                />
+              </div>
+            )}
+
             {/* Título */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -62,7 +92,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
               </label>
               <input
                 type="text"
-                {...register('title', { // ✅ CORRIGIDO: title ao invés de titulo
+                {...register('title', {
                   required: 'Título é obrigatório',
                   minLength: { value: 10, message: 'Título deve ter pelo menos 10 caracteres' },
                   maxLength: { value: 500, message: 'Título deve ter no máximo 500 caracteres' }
@@ -70,7 +100,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Digite o título do seu projeto"
               />
-              {/* ✅ CORRIGIDO: title ao invés de titulo */}
               {errors.title && (
                 <p className="text-red-600 text-sm mt-1">{errors.title.message}</p>
               )}
@@ -82,7 +111,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 Categoria *
               </label>
               <select
-                {...register('category', { required: 'Categoria é obrigatória' })} // ✅ CORRIGIDO: category ao invés de categoria
+                {...register('category', { required: 'Categoria é obrigatória' })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Selecione uma categoria</option>
@@ -92,7 +121,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                   </option>
                 ))}
               </select>
-              {/* ✅ CORRIGIDO: category ao invés de categoria */}
               {errors.category && (
                 <p className="text-red-600 text-sm mt-1">{errors.category.message}</p>
               )}
@@ -104,7 +132,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 Resumo do Projeto *
               </label>
               <textarea
-                {...register('summary', { // ✅ CORRIGIDO: summary ao invés de resumo
+                {...register('summary', {
                   required: 'Resumo é obrigatório',
                   minLength: { value: 50, message: 'Resumo deve ter pelo menos 50 caracteres' },
                   maxLength: { value: 3000, message: 'Resumo deve ter no máximo 3000 caracteres' }
@@ -114,7 +142,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 placeholder="Descreva seu projeto de forma detalhada..."
               />
               <div className="flex justify-between items-center mt-2">
-                {/* ✅ CORRIGIDO: summary ao invés de resumo */}
                 {errors.summary && (
                   <p className="text-red-600 text-sm">{errors.summary.message}</p>
                 )}
@@ -124,7 +151,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
               </div>
             </div>
 
-            {/* Objetivo - Campo adicional importante */}
+            {/* Objetivo */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Objetivo *
@@ -143,7 +170,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
               )}
             </div>
 
-            {/* Metodologia - Campo adicional importante */}
+            {/* Metodologia */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Metodologia *
@@ -172,7 +199,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Selecione a área do conhecimento</option>
-                {/* Aqui você pode adicionar as opções das áreas do conhecimento */}
                 <option value="1">Ciências Exatas e da Terra</option>
                 <option value="2">Ciências Biológicas</option>
                 <option value="3">Engenharias</option>

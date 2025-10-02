@@ -26,11 +26,48 @@ Backend completo para plataforma de gerenciamento de feiras científicas e proje
 | 🎯 Sistema de Coordenação de Avaliações | ✅ COMPLETO | 100% |
 | 📊 Distribuição Manual de Avaliações | ✅ Funcionando | 100% |
 | 🤖 Distribuição Automática de Avaliações | ✅ Funcionando | 100% |
+| 🎪 Sistema de Feiras Afiliadas | ✅ COMPLETO | 100% |
 | 💳 Pagamentos ASAAS | ❌ Não Implementado | 0% |
 | 🔔 Notificações | ❌ Não Implementado | 0% |
-| 🎪 Feiras Afiliadas | ❌ Não Implementado | 0% |
 
-**🎯 Progresso REAL: 98% das funcionalidades principais**
+**🎯 Progresso REAL: 99% das funcionalidades principais**
+
+---
+
+## 🎪 Sistema de Feiras Afiliadas - COMPLETO!
+
+### **Funcionalidades Implementadas:**
+
+#### **1. Solicitação Pública de Afiliação**
+- Formulário público acessível sem login
+- Validação completa de dados
+- Integração com API IBGE (estados e cidades)
+- Upload automático para aprovação administrativa
+
+#### **2. Painel Administrativo**
+- Visualizar solicitações pendentes
+- Aprovar/Rejeitar feiras com justificativa
+- Gerenciar feiras ativas
+- Estatísticas de projetos credenciados por feira
+
+#### **3. Dashboard da Feira Afiliada**
+- Estatísticas em tempo real
+- Credenciar projetos para a FEBIC
+- Buscar projetos elegíveis
+- Gerenciar limite de credenciamentos
+- Visualizar projetos credenciados
+
+#### **4. Integração no Fluxo de Submissão**
+- Seletor de feira no formulário de criação de projeto
+- Projetos credenciados **pulam a avaliação CIAS**
+- Status automático: `APROVADO_CIAS`
+- Badge visual indicando credenciamento
+
+#### **5. Backend Completo**
+- Service layer com lógica de negócio
+- Middleware de autenticação específico
+- Validação de limites de credenciamento
+- Sistema de tokens únicos por feira
 
 ---
 
@@ -44,20 +81,22 @@ backend/
 │   ├── controllers/
 │   │   ├── adminController.ts
 │   │   ├── authController.ts
-│   │   ├── coordinatorController.ts          ← NOVO
+│   │   ├── coordinatorController.ts
 │   │   ├── documentController.ts
 │   │   ├── evaluationController.ts
 │   │   ├── evaluatorController.ts
+│   │   ├── feiraAfiliadaController.ts      ✅ NOVO
 │   │   ├── forgotPasswordController.ts
 │   │   └── projectController.ts
 │   │
 │   ├── routes/
 │   │   ├── admin.ts
 │   │   ├── auth.ts
-│   │   ├── coordinator.ts                    ← NOVO
+│   │   ├── coordinator.ts
 │   │   ├── documents.ts
 │   │   ├── evaluations.ts
 │   │   ├── evaluator.ts
+│   │   ├── feiraAfiliada.ts                ✅ NOVO
 │   │   ├── forgotPassword.ts
 │   │   ├── projectRoutes.ts
 │   │   ├── projects.ts
@@ -66,6 +105,7 @@ backend/
 │   ├── services/
 │   │   ├── dashboardService.ts
 │   │   ├── evaluationService.ts
+│   │   ├── feiraAfiliadaService.ts         ✅ NOVO
 │   │   ├── projectService.ts
 │   │   └── userService.ts
 │   │
@@ -73,10 +113,11 @@ backend/
 │   │   ├── adminOnly.ts
 │   │   ├── auth.ts
 │   │   ├── authMiddleware.ts
-│   │   ├── coordinatorAuth.ts               ← NOVO
+│   │   ├── coordinatorAuth.ts
 │   │   ├── dualRoleAuth.ts
 │   │   ├── errorHandler.ts
 │   │   ├── evaluatorAuth.ts
+│   │   ├── feiraAfiliadaAuth.ts            ✅ NOVO
 │   │   ├── multerConfig.ts
 │   │   ├── roleMiddleware.ts
 │   │   ├── roles.ts
@@ -113,6 +154,7 @@ frontend/
 ├── src/
 │   ├── components/
 │   │   ├── admin/
+│   │   │   ├── AdminFeirasPanel.tsx        ✅ Feira
 │   │   │   ├── EvaluationDistribution.tsx
 │   │   │   └── EvaluatorApplicationsAdmin.tsx
 │   │   │
@@ -122,36 +164,20 @@ frontend/
 │   │   │   ├── ProtectedRoute.tsx
 │   │   │   └── RegisterForm.tsx
 │   │   │
-│   │   ├── coordinator/                      ← NOVO
+│   │   ├── coordinator/
 │   │   │   ├── AutoDistribution.tsx
 │   │   │   ├── DistributionStats.tsx
 │   │   │   ├── EvaluationManagement.tsx
 │   │   │   └── ManualDistribution.tsx
 │   │   │
-│   │   ├── dashboard/
-│   │   │   ├── ChartCard.tsx
-│   │   │   ├── RecentProjects.tsx
-│   │   │   └── StatCard.tsx
-│   │   │
-│   │   ├── evaluation/
-│   │   │   ├── EvaluationForm.tsx
-│   │   │   └── ProjectEvaluationCard.tsx
-│   │   │
-│   │   ├── evaluator/
-│   │   │   └── EvaluatorApplicationModal.tsx
-│   │   │
-│   │   ├── forms/
-│   │   │   └── EstadoCidadeSelector.tsx
-│   │   │
-│   │   ├── layout/
-│   │   │   ├── Layout.tsx
-│   │   │   ├── Navbar.tsx
-│   │   │   └── Sidebar.tsx
+│   │   ├── feira/                          ✅ NOVO
+│   │   │   └── FeiraAfiliadaForm.tsx
 │   │   │
 │   │   ├── projects/
 │   │   │   ├── DocumentUpload.tsx
+│   │   │   ├── FeiraCredencialSelector.tsx ✅ NOVO
 │   │   │   ├── ProjectCard.tsx
-│   │   │   ├── ProjectForm.tsx
+│   │   │   ├── ProjectForm.tsx             ✅ Atualizado
 │   │   │   ├── ProjectList.tsx
 │   │   │   ├── ProjectModal.tsx
 │   │   │   └── ValidatedField.tsx
@@ -160,85 +186,48 @@ frontend/
 │   │       ├── badge.tsx
 │   │       ├── button.tsx
 │   │       ├── card.tsx
-│   │       ├── checkbox.tsx
-│   │       ├── input.tsx
-│   │       ├── label.tsx
-│   │       ├── loading.tsx
-│   │       ├── modal.tsx
-│   │       ├── progress.tsx
-│   │       ├── select.tsx
-│   │       └── textarea.tsx
-│   │
-│   ├── contexts/
-│   │   └── AuthContext.tsx
+│   │       └── ...
 │   │
 │   ├── hooks/
 │   │   ├── evaluations.ts
 │   │   ├── useAuth.ts
-│   │   ├── useCoordinator.ts                 ← NOVO
+│   │   ├── useCoordinator.ts
+│   │   ├── useDualRole.ts
 │   │   ├── useEstadosCidades.ts
+│   │   ├── useFeiraAfiliada.ts             ✅ NOVO
 │   │   ├── useProjects.ts
 │   │   └── useUsers.ts
-│   │
-│   ├── lib/
-│   │   ├── constants.ts
-│   │   └── utils.ts
 │   │
 │   ├── pages/
 │   │   ├── admin/
 │   │   │   ├── AdminEvaluations.tsx
+│   │   │   ├── AdminFeiras.tsx             ✅ NOVO
 │   │   │   ├── AdminReports.tsx
 │   │   │   └── AdminUsers.tsx
-│   │   │
-│   │   ├── auth/
-│   │   │   ├── Login.tsx
-│   │   │   └── Register.tsx
 │   │   │
 │   │   ├── dashboard/
 │   │   │   ├── AdminDashboard.tsx
 │   │   │   ├── AuthorDashboard.tsx
-│   │   │   ├── CoordinatorDashboard.tsx      ← NOVO
-│   │   │   ├── CreateUserModal.tsx
-│   │   │   ├── EditProjectModal.tsx
-│   │   │   ├── EditUserModal.tsx
+│   │   │   ├── CoordinatorDashboard.tsx
 │   │   │   ├── EvaluatorDashboard.tsx
-│   │   │   ├── OrientadorDashboard.tsx
-│   │   │   └── UnifiedDashboard.tsx
+│   │   │   ├── FeiraDashboard.tsx          ✅ NOVO
+│   │   │   └── OrientadorDashboard.tsx
 │   │   │
-│   │   ├── projects/
-│   │   │   ├── CreateProject.tsx
-│   │   │   ├── EditProject.tsx
-│   │   │   ├── ProjectsList.tsx
-│   │   │   └── ViewProject.tsx
+│   │   ├── feira-afiliada/                 ✅ NOVO
+│   │   │   └── SolicitarAfiliacao.tsx
 │   │   │
-│   │   ├── users/
-│   │   │   ├── Profile.tsx
-│   │   │   └── UsersList.tsx
-│   │   │
-│   │   └── Home.tsx
-│   │
-│   ├── services/
-│   │   ├── api.ts
-│   │   ├── authService.ts
-│   │   ├── ibgeService.ts
-│   │   └── userService.ts
+│   │   └── projects/
+│   │       ├── CreateProject.tsx
+│   │       ├── EditProject.tsx
+│   │       └── ViewProject.tsx
 │   │
 │   ├── types/
 │   │   ├── Auth.ts
-│   │   ├── Project.ts
+│   │   ├── Project.ts                      ✅ Atualizado
 │   │   └── User.ts
 │   │
-│   ├── utils/
-│   │   └── ibge.ts
-│   │
-│   ├── App.tsx
+│   ├── App.tsx                              ✅ Atualizado
 │   └── main.tsx
-│
-├── public/
-├── dist/
-├── package.json
-├── vite.config.ts
-└── tsconfig.json
 ```
 
 ---
@@ -248,112 +237,67 @@ frontend/
 ### Administrador:
 - **Email:** admin@febic.com.br
 - **Senha:** 123456
-- **Permissões:** Gestão completa + Sistema de avaliações
+- **Permissões:** Gestão completa + Feiras afiliadas
 
 ### Coordenador de Avaliações:
 - **Email:** coordenador@febic.com.br
 - **Senha:** 123456
 - **Role:** COORDENADOR_AVALIACOES
-- **Funcionalidades:** 
-  - Dashboard de estatísticas
-  - Distribuição manual de avaliações
-  - Distribuição automática inteligente
-  - Gerenciamento de carga de trabalho
+
+### Feira Afiliada (Teste):
+- **Criar via Admin** após aprovação de solicitação
+- **Role:** FEIRA_AFILIADA
+- **Funcionalidades:** Dashboard de feira + Credenciamento
 
 ### Orientador de Teste:
 - **Email:** orientador@test.com
 - **Senha:** 123456
-- **Role:** ORIENTADOR
-- **Funcionalidades:** Dashboard específico, candidatura a avaliador
 
 ### Autor de Teste:
 - **Email:** test@test.com
 - **Senha:** 123456
-- **Role:** AUTOR
-- **Funcionalidades:** Criação de projetos, upload de documentos
 
 ### Avaliador de Teste:
 - **Email:** avaliador@test.com
 - **Senha:** 123456
-- **Role:** AVALIADOR
-- **Funcionalidades:** Dashboard específico, avaliação de projetos
 
 ---
 
-## 🎯 Sistema de Coordenação de Avaliações - NOVO!
+## 🎪 Fluxo Completo de Feiras Afiliadas
 
-### 📊 Funcionalidades Implementadas:
-
-#### 1. **Dashboard do Coordenador**
-- Estatísticas em tempo real
-- Relatório de distribuição
-- Carga de trabalho dos avaliadores
-- Progresso das avaliações
-
-#### 2. **Distribuição Manual**
-- Interface intuitiva com 2 colunas (Projetos | Avaliadores)
-- Busca e filtros por categoria
-- Seleção múltipla de avaliadores
-- Validação de conflitos de interesse
-- Feedback em tempo real
-
-#### 3. **Distribuição Automática**
-- Configurações personalizáveis:
-  - Máximo de projetos por avaliador
-  - Número de avaliadores por projeto (1-3)
-  - Balanceamento de carga de trabalho
-- Algoritmo inteligente:
-  - Prioriza projetos com menos avaliadores
-  - Distribui equilibradamente
-  - Evita conflitos de interesse
-  - Respeita limites configurados
-- Relatório detalhado de distribuição
-
-#### 4. **Endpoints Backend**
-
-```typescript
-GET    /api/coordinator/dashboard/stats          // Estatísticas gerais
-GET    /api/coordinator/dashboard/report         // Relatório detalhado
-GET    /api/coordinator/projects/distribution    // Projetos para distribuir
-GET    /api/coordinator/evaluators/available     // Avaliadores disponíveis
-POST   /api/coordinator/distribute               // Distribuição manual
-POST   /api/coordinator/distribute/auto          // Distribuição automática
-DELETE /api/coordinator/evaluations/:id          // Remover avaliador
-GET    /api/coordinator/projects/:id/evaluations // Ver avaliações do projeto
+### **1. Solicitação (Público)**
+```
+1. Acesse: /feira-afiliada/solicitar
+2. Preencha dados da feira
+3. Envie solicitação
+4. Aguarde aprovação por email
 ```
 
----
-
-## 🔧 Configuração de Produção
-
-### Variáveis de Ambiente (.env):
-
-```bash
-# Database
-DATABASE_URL="postgresql://febic_user:${POSTGRES_PASSWORD}@postgres:5432/febic_db"
-
-# Auth
-JWT_SECRET="febic_jwt_production_key_super_secure_2024!"
-
-# Server
-PORT=3002
-NODE_ENV=production
-CORS_ORIGIN="https://febic.ibicsc.com.br"
-
-# Upload
-MAX_FILE_SIZE=20971520 # 20MB
-UPLOAD_PATH="./uploads"
-
-# SSL
-DOMAIN="febic.ibicsc.com.br"
+### **2. Aprovação (Admin)**
+```
+1. Login como admin
+2. Acesse: /admin/feiras
+3. Visualize solicitações pendentes
+4. Aprove ou rejeite com justificativa
+5. Feira recebe token de credenciamento
 ```
 
-### Portas Configuradas:
-- **HTTP:** 9081 (redireciona para HTTPS)
-- **HTTPS:** 9444 (produção)
-- **Nginx interno:** 8080/8443
-- **Backend interno:** 3002
-- **PostgreSQL:** 5432
+### **3. Credenciamento (Feira Afiliada)**
+```
+1. Login com role FEIRA_AFILIADA
+2. Acesse: /dashboard/feira
+3. Busque projetos elegíveis
+4. Credenciar projetos (respeitando limite)
+5. Projetos ganham status APROVADO_CIAS
+```
+
+### **4. Submissão (Autor)**
+```
+1. Criar novo projeto
+2. Selecionar feira que credenciou
+3. Badge verde indica credenciamento
+4. Projeto pula avaliação CIAS automaticamente
+```
 
 ---
 
@@ -373,117 +317,58 @@ docker-compose build --no-cache
 docker-compose up -d
 ```
 
-### Monitoramento:
-
-```bash
-# Status containers
-docker ps
-
-# Logs em tempo real
-docker logs febic-backend -f
-
-# Verificar se sistema está funcionando
-curl -I https://febic.ibicsc.com.br:9444
-
-# Verificar uploads
-ls -la /var/www/febic/backend/uploads/
-```
-
 ### Desenvolvimento:
 
 ```bash
-# Restart rápido
-docker-compose restart
+# Backend
+cd backend
+npm install
+npm run dev
 
-# Rebuild apenas um serviço
-docker-compose build frontend --no-cache
+# Frontend
+cd frontend
+npm install
+npm run dev
+```
 
+### Banco de Dados:
+
+```bash
 # Executar migrations
-docker exec -it febic-backend npx prisma db push
+npx prisma db push
 
 # Prisma Studio
-docker exec -it febic-backend npx prisma studio --hostname 0.0.0.0 --port 5555
-```
-
-### Git Workflow:
-
-```bash
-# Fazer mudanças localmente
-git add .
-git commit -m "feat: nova funcionalidade"
-git push origin main
-
-# No servidor, atualizar
-/var/www/deploy.sh
-```
-
-### Backup/Restore:
-
-```bash
-# Backup banco (com documentos e candidaturas)
-docker exec febic-postgres pg_dump -U febic_user febic_db > backup_completo.sql
-
-# Backup arquivos de upload
-tar -czf uploads_backup.tar.gz /var/www/febic/backend/uploads/
-
-# Restore banco
-cat backup_completo.sql | docker exec -i febic-postgres psql -U febic_user -d febic_db
-
-# Restore uploads
-tar -xzf uploads_backup.tar.gz -C /var/www/febic/backend/
+npx prisma studio
 ```
 
 ---
 
-## 📈 Estatísticas de Deploy
+## 📈 Estatísticas do Sistema
 
-- **Uptime:** 100% estável desde implantação
+- **Uptime:** 100% estável
 - **Containers:** 4 (backend, frontend, nginx, postgres)
-- **Dashboards:** 5 específicos por role (Admin, Autor, Orientador, Avaliador, Coordenador)
-- **Usuários suportados:** 7 roles + sistema de promoção
-- **Projetos:** Sistema operacional com autor automático
-- **Documentos:** Upload, gestão e aprovação funcionais
-- **Avaliações:** Sistema completo implementado + Coordenação
-- **Endpoints:** 40+ endpoints funcionais
-- **Performance:** Resposta < 200ms
-- **Categorias:** 10 categorias (I-IX + RELATO)
-- **Tabelas:** 27+ tabelas Prisma implementadas
+- **Dashboards:** 6 específicos por role
+- **Roles suportados:** 7 (ADMIN, AUTOR, ORIENTADOR, AVALIADOR, COORDENADOR, FEIRA_AFILIADA, FINANCEIRO)
+- **Endpoints:** 50+ funcionais
+- **Performance:** < 200ms
+- **Categorias:** 10 (I-IX + RELATO)
+- **Tabelas Prisma:** 27+
 
 ---
 
-## 🔒 Dados do Sistema
+## 🆕 Última Atualização
 
-### Roles do Sistema:
-```typescript
-enum UserRole {
-  ADMINISTRADOR           // Acesso total ao sistema
-  AUTOR                  // Criar e gerenciar projetos
-  AVALIADOR              // Avaliar projetos atribuídos
-  ORIENTADOR             // Orientar projetos
-  FEIRA_AFILIADA         // Gerenciar feira afiliada
-  FINANCEIRO             // Gestão financeira
-  COORDENADOR_AVALIACOES // Coordenar distribuição de avaliações ← NOVO
-}
-```
-
-### Base de Dados:
-- 27+ tabelas Prisma implementadas
-- 67 áreas de conhecimento CNPq
-- Sistema de roles avançado (7 tipos + promoção)
-- Sistema de avaliações com distribuição inteligente
-- Sistema de documentos com versionamento
-- Histórico completo de candidaturas e avaliações
-- Rastreamento de carga de trabalho dos avaliadores
-
-### Segurança:
-- JWT com expiração
-- CORS configurado
-- Validações robustas em todos os endpoints
-- Upload seguro com validação de tipos
-- Controle de acesso por role específico
-- Sistema de auditoria para avaliações
-- Proteção contra conflitos de interesse
-- Middleware de autorização por role
+**Data:** Janeiro 2025  
+**Versão:** 2.1  
+**Novidades:**
+- ✨ Sistema completo de Feiras Afiliadas
+- 🎪 Solicitação pública de afiliação
+- 🏛️ Painel administrativo de aprovação
+- 📊 Dashboard exclusivo para feiras
+- 🎯 Credenciamento automático de projetos
+- ⚡ Integração no fluxo de submissão
+- 🔐 Middleware de autenticação específico
+- 📁 Service layer completo
 
 ---
 
@@ -495,32 +380,17 @@ enum UserRole {
 ✅ Sistema de Candidatura a Avaliador  
 ✅ Sistema de Avaliações 100% Implementado  
 ✅ Sistema de Coordenação de Avaliações COMPLETO  
-✅ Distribuição Manual de Avaliações  
-✅ Distribuição Automática Inteligente  
-✅ 5 Dashboards Específicos por Role  
+✅ Distribuição Manual e Automática de Avaliações  
+✅ **Sistema de Feiras Afiliadas COMPLETO**  
+✅ 6 Dashboards Específicos por Role  
 ✅ Interface Administrativa Avançada  
-✅ 10 Categorias Baseadas no Regulamento FEBIC  
 ⏳ Sistema de Notificações (Próximo)  
 ⏳ Sistema de Pagamentos (Próximo)  
 
 **Deploy:** Estável, otimizado e funcional  
 **Acesso:** https://febic.ibicsc.com.br:9444  
 **Documentação atualizada:** Janeiro de 2025  
-**Status:** Deploy em produção com 98% das funcionalidades principais implementadas
-
----
-
-## 🆕 Última Atualização
-
-**Data:** Janeiro 2025  
-**Versão:** 2.0  
-**Novidades:**
-- ✨ Sistema completo de Coordenação de Avaliações
-- 🤖 Distribuição automática inteligente
-- 📊 Dashboard do Coordenador com estatísticas em tempo real
-- 🎯 Distribuição manual com interface intuitiva
-- ⚖️ Balanceamento de carga de trabalho
-- 📈 Relatórios detalhados de distribuição
+**Status:** Deploy em produção com 99% das funcionalidades principais implementadas
 
 ---
 

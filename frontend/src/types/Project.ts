@@ -20,9 +20,9 @@ export type OrientadorTipo = 'ORIENTADOR' | 'COORIENTADOR';
 // ===== INTERFACES PRINCIPAIS =====
 
 export interface Project {
-  id: string; // âœ… string (CUID) - CORRIGIDO: agora Ã© string, nÃ£o number
-  title: string; // âœ… title (nÃ£o titulo)
-  summary: string; // âœ… summary (nÃ£o resumo)
+  id: string;
+  title: string;
+  summary: string;
   objective: string;
   methodology: string;
   results?: string;
@@ -49,7 +49,10 @@ export interface Project {
   exemptionReason?: string;
   submissionDate?: string;
   createdAt: string;
-  updatedAt: string;  
+  updatedAt: string;
+  
+  // ✨ NOVO: Feira Afiliada
+  feiraAfiliadaId?: string | null;
   
   _count?: {
     members?: number;
@@ -70,6 +73,15 @@ export interface Project {
     sigla: string;
     nome: string;
     nivel: number;
+  };
+  // ✨ NOVO: Relacionamento com Feira Afiliada
+  feiraAfiliada?: {
+    id: string;
+    name: string;
+    city: string;
+    state: string;
+    edition: string;
+    year: number;
   };
   members?: ProjectMember[];
   orientadores?: ProjectOrientador[];
@@ -97,7 +109,7 @@ export interface Project {
 
 export interface ProjectMemberWithUser {
   id: number;
-  projectId: string; // âœ… CORRIGIDO: string ao invÃ©s de number
+  projectId: string;
   userId: number;
   role: MemberRole;
   createdAt: string;
@@ -110,7 +122,7 @@ export interface ProjectMemberWithUser {
 
 export interface ProjectOrientadorWithUser {
   id: number;
-  projectId: string; // âœ… CORRIGIDO: string ao invÃ©s de number
+  projectId: string;
   userId: number;
   tipo: OrientadorTipo;
   createdAt: string;
@@ -123,7 +135,7 @@ export interface ProjectOrientadorWithUser {
 
 export interface ProjectDocumentInfo {
   id: number;
-  projectId: string; // âœ… CORRIGIDO: string ao invÃ©s de number
+  projectId: string;
   documentType: string;
   fileName: string;
   filePath: string;
@@ -135,13 +147,13 @@ export interface ProjectDocumentInfo {
 
 export interface AreaConhecimento {
   id: string;
-  sigla: string; // âœ… Corrigido
+  sigla: string;
   nome: string;
   nivel: number;
-  paiId?: string; // âœ… Corrigido
+  paiId?: string;
 }
 
-// ===== FORMULÃRIOS =====
+// ===== FORMULÁRIOS =====
 
 export interface ProjectMember {
   userId?: string;
@@ -181,7 +193,7 @@ export interface ProjectOrientador {
 }
 
 export interface CreateProjectData {
-  // Dados bÃ¡sicos
+  // Dados básicos
   title: string;
   summary: string;
   objective: string;
@@ -190,7 +202,7 @@ export interface CreateProjectData {
   conclusion?: string;
   bibliography?: string;
   
-  // Categoria e Ã¡rea
+  // Categoria e área
   category: ProjectCategory | '';
   areaConhecimentoId: string;
   keywords: string[];
@@ -207,6 +219,9 @@ export interface CreateProjectData {
   hasDisability: boolean;
   socialVulnerability: boolean;
   
+  // ✨ NOVO: Feira Afiliada
+  feiraAfiliadaId?: string | null;
+  
   // Integrantes e orientadores
   members: ProjectMember[];
   orientadores: ProjectOrientador[];
@@ -217,32 +232,35 @@ export interface CreateProjectData {
   exemptionReason?: string;
 }
 
-// âœ… ADICIONADA: Interface que estava sendo importada mas nÃ£o existia
 export interface CreateProjectRequest extends CreateProjectData {}
 
 export interface UpdateProjectData {
-  title?: string; // âœ… CORRIGIDO: title ao invÃ©s de titulo
-  category?: ProjectCategory; // âœ… CORRIGIDO: category ao invÃ©s de categoria
+  title?: string;
+  category?: ProjectCategory;
   areaConhecimentoId?: string;
-  summary?: string; // âœ… CORRIGIDO: summary ao invÃ©s de resumo
+  summary?: string;
   keywords?: string;
-  institution?: string; // âœ… CORRIGIDO: institution ao invÃ©s de institutionName
+  institution?: string;
   institutionState?: string;
   institutionCity?: string;
-  isPublicSchool?: boolean; // âœ… CORRIGIDO: isPublicSchool ao invÃ©s de isPublicInstitution
+  isPublicSchool?: boolean;
   isFullTimeInstitution?: boolean;
+  // ✨ NOVO: Feira Afiliada
+  feiraAfiliadaId?: string | null;
 }
 
 // ===== FILTROS =====
 
 export interface ProjectFilters {
   search?: string;
-  category?: ProjectCategory; // âœ… CORRIGIDO: category ao invÃ©s de categoria
+  category?: ProjectCategory;
   status?: ProjectStatus;
   areaConhecimentoId?: string;
   isCredenciado?: boolean;
   institutionState?: string;
   createdBy?: number;
+  // ✨ NOVO: Filtrar por feira
+  feiraAfiliadaId?: string;
   page?: number;
   limit?: number;
 }
@@ -269,7 +287,7 @@ export interface ProjectStats {
   pendingPayments: number;
 }
 
-// ===== CONFIGURAÃ‡Ã•ES POR CATEGORIA =====
+// ===== CONFIGURAÇÕES POR CATEGORIA =====
 
 export const PROJECT_CATEGORIES = [
   {
@@ -337,7 +355,7 @@ export const PROJECT_CATEGORIES = [
 export const PROJECT_STATUS = [
   { value: 'RASCUNHO', label: 'Rascunho', color: 'gray' },
   { value: 'SUBMETIDO', label: 'Submetido', color: 'blue' },
-  { value: 'EM_ANALISE_CIAS', label: 'Em AnÃ¡lise CIAS', color: 'yellow' },
+  { value: 'EM_ANALISE_CIAS', label: 'Em Análise CIAS', color: 'yellow' },
   { value: 'APROVADO_CIAS', label: 'Aprovado CIAS', color: 'green' },
   { value: 'REPROVADO_CIAS', label: 'Reprovado CIAS', color: 'red' },
   { value: 'AGUARDANDO_PAGAMENTO', label: 'Aguardando Pagamento', color: 'yellow' },
@@ -354,12 +372,12 @@ export const PROJECT_STATUS_INFO: Record<ProjectStatus, {
 }> = {
   'RASCUNHO': {
     label: 'Rascunho',
-    description: 'Projeto em elaboraÃ§Ã£o',
+    description: 'Projeto em elaboração',
     color: 'gray'
   },
   'SUBMETIDO': {
     label: 'Submetido',
-    description: 'Enviado para avaliaÃ§Ã£o',
+    description: 'Enviado para avaliação',
     color: 'blue'
   },
   'EM_ANALISE_CIAS': {
@@ -404,7 +422,6 @@ export const PROJECT_STATUS_INFO: Record<ProjectStatus, {
   }
 };
 
-// âœ… ADICIONADA: Constante que estava sendo importada mas nÃ£o existia
 export const CATEGORY_INFO = PROJECT_CATEGORIES.reduce((acc, cat) => {
   acc[cat.value] = {
     label: cat.label,
@@ -414,7 +431,7 @@ export const CATEGORY_INFO = PROJECT_CATEGORIES.reduce((acc, cat) => {
   return acc;
 }, {} as Record<ProjectCategory, { label: string; description: string; maxParticipants: number; }>);
 
-// ===== UTILITÃRIOS =====
+// ===== UTILITÁRIOS =====
 
 export const getProjectCategoryInfo = (category: ProjectCategory) => {
   return PROJECT_CATEGORIES.find(c => c.value === category);
@@ -436,4 +453,9 @@ export const canDeleteProject = (project: Project, userId?: string) => {
 export const canSubmitProject = (project: Project, userId?: string) => {
   const isOwner = project.ownerId === userId;
   return isOwner && project.status === 'RASCUNHO';
+};
+
+// ✨ NOVO: Verificar se projeto foi credenciado por feira
+export const isProjetoCredenciado = (project: Project): boolean => {
+  return !!project.feiraAfiliadaId;
 };

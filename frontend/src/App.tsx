@@ -14,16 +14,18 @@ import AuthorDashboard from './pages/dashboard/AuthorDashboard';
 import UnifiedDashboard from './pages/dashboard/UnifiedDashboard';
 import EvaluatorDashboard from './pages/dashboard/EvaluatorDashboard';
 import { CoordinatorDashboard } from './pages/dashboard/CoordinatorDashboard';
+import { FeiraDashboard } from './pages/dashboard/FeiraDashboard';
 
 // Project pages
-import CreateProject from './pages/projects/CreateProject';
-import ProjectsList from './pages/projects/ProjectsList';
+import ViewProject from './pages/projects/ViewProject';
 
 // Admin pages
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminEvaluations from './pages/admin/AdminEvaluations';
+import { AdminFeiras } from './pages/admin/AdminFeiras';
 
-import ViewProject from './pages/projects/ViewProject';
+// Feira Afiliada pages
+import { SolicitarAfiliacao } from './pages/feira-afiliada/SolicitarAfiliacao';
 
 // Home
 import Home from './pages/Home';
@@ -37,6 +39,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Home />} />
+          
+          {/* Feira Afiliada - Rota pública para solicitação */}
+          <Route path="/feira-afiliada/solicitar" element={<SolicitarAfiliacao />} />
 
           {/* Protected routes - Admin */}
           <Route
@@ -63,6 +68,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/feiras"
+            element={
+              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+                <AdminFeiras />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected routes - Coordinator */}
           <Route
@@ -70,6 +83,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['COORDENADOR_AVALIACOES']}>
                 <CoordinatorDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected routes - Feira Afiliada */}
+          <Route
+            path="/dashboard/feira"
+            element={
+              <ProtectedRoute allowedRoles={['FEIRA_AFILIADA', 'ADMINISTRADOR']}>
+                <FeiraDashboard />
               </ProtectedRoute>
             }
           />
@@ -118,7 +141,7 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute allowedRoles={['ADMINISTRADOR', 'AUTOR', 'ORIENTADOR', 'AVALIADOR', 'COORDENADOR_AVALIACOES']}>
+              <ProtectedRoute allowedRoles={['ADMINISTRADOR', 'AUTOR', 'ORIENTADOR', 'AVALIADOR', 'COORDENADOR_AVALIACOES', 'FEIRA_AFILIADA']}>
                 <DashboardRedirect />
               </ProtectedRoute>
             }
@@ -165,6 +188,8 @@ const DashboardRedirect: React.FC = () => {
     return <Navigate to="/dashboard/evaluator" replace />;
   } else if (user.role === 'COORDENADOR_AVALIACOES') {
     return <Navigate to="/dashboard/coordinator" replace />;
+  } else if (user.role === 'FEIRA_AFILIADA') {
+    return <Navigate to="/dashboard/feira" replace />;
   }
   
   return <Navigate to="/login" replace />;

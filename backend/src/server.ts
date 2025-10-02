@@ -10,6 +10,7 @@ import forgotPasswordRoutes from './routes/forgotPassword';
 import userRoleRoutes from './routes/userRoleRoutes';
 import { authenticateWithDualRole } from './middleware/dualRoleAuth';
 import coordinatorRoutes from './routes/coordinator';
+import feiraAfiliadaRoutes from './routes/feiraAfiliada';
 
 
 // Configurar variáveis de ambiente PRIMEIRO
@@ -133,6 +134,8 @@ app.use('/api/projects', projectRoutes);
 
 // Coordenador de avaliação
 app.use('/api/coordinator', coordinatorRoutes);
+
+app.use('/api/feira-afiliada', feiraAfiliadaRoutes);
 
 
 
