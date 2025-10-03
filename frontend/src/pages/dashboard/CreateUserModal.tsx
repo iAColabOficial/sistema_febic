@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Save, User, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
+import { EstadoCidadeSelector } from '../../components/forms/EstadoCidadeSelector';
 
 interface User {
   id: string;
@@ -22,17 +23,19 @@ interface CreateUserModalProps {
 
 const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'AUTOR',
-    cpf: '',
-    phone: '',
-    city: '',
-    state: '',
-    institution: ''
-  });
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  role: 'AUTOR',
+  cpf: '',
+  phone: '',
+  city: '',
+  cityId: null as number | null,  // ← NOVO
+  state: '',
+  stateId: null as number | null,  // ← NOVO
+  institution: ''
+});
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -117,21 +120,23 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSa
   };
 
   const handleClose = () => {
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      role: 'AUTOR',
-      cpf: '',
-      phone: '',
-      city: '',
-      state: '',
-      institution: ''
-    });
-    setErrors({});
-    onClose();
-  };
+  setFormData({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'AUTOR',
+    cpf: '',
+    phone: '',
+    city: '',
+    cityId: null,  // ← NOVO
+    state: '',
+    stateId: null,  // ← NOVO
+    institution: ''
+  });
+  setErrors({});
+  onClose();
+};
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -170,12 +175,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSa
     { value: 'AVALIADOR', label: 'Avaliador', description: 'Pode avaliar projetos submetidos' },
     { value: 'ADMINISTRADOR', label: 'Administrador', description: 'Acesso completo ao sistema' }
   ];
-
-  const estados = [
-    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
-    'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
-    'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
-  ];
+ 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -368,35 +368,25 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSa
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cidade
-                </label>
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Digite a cidade"
+              <div className="md:col-span-2">
+                <EstadoCidadeSelector
+                  estadoSelecionado={formData.stateId}
+                  cidadeSelecionada={formData.cityId}
+                  onEstadoChange={(estadoId, estado) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      stateId: estadoId,
+                      state: estado?.sigla || ''
+                    }));
+                  }}
+                  onCidadeChange={(cidadeId, cidade) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      cityId: cidadeId,
+                      city: cidade?.nome || ''
+                    }));
+                  }}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Estado
-                </label>
-                <select
-                  value={formData.state}
-                  onChange={(e) => handleInputChange('state', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Selecione o estado</option>
-                  {estados.map((estado) => (
-                    <option key={estado} value={estado}>
-                      {estado}
-                    </option>
-                  ))}
-                </select>
               </div>
 
               <div className="md:col-span-2">

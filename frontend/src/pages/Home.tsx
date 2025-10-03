@@ -173,10 +173,10 @@ const Home = () => {
 
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="hover-lift" asChild>
-              <Link to="/auth/login">Entrar</Link>
+              <Link to="/login">Entrar</Link>
             </Button>
             <Button size="sm" className="bg-gradient-primary hover-glow" asChild>
-              <Link to="/auth/register">Inscrever-se</Link>
+              <Link to="/register">Inscrever-se</Link>
             </Button>
           </div>
         </div>
@@ -202,7 +202,7 @@ const Home = () => {
             
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="group bg-white text-primary hover:bg-white/90 hover-lift" asChild>
-                <Link to="/auth/register">
+                <Link to="/register">
                   Inscrever Projeto
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -303,7 +303,7 @@ const Home = () => {
               </div>
               
               <Button className="bg-white text-primary hover:bg-white/90 hover-lift" asChild>
-                <Link to="/auth/register">
+                <Link to="/register">
                   Participar da FEBIC
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -634,8 +634,8 @@ const Home = () => {
             <div className="space-y-4">
               <h3 className="font-semibold text-white">Participação</h3>
               <ul className="space-y-2 text-sm">
-                <li><Link to="/auth/register" className="text-white/80 hover:text-white transition-smooth">Inscrever Projeto</Link></li>
-                <li><Link to="/auth/login" className="text-white/80 hover:text-white transition-smooth">Área do Participante</Link></li>
+                <li><Link to="/register" className="text-white/80 hover:text-white transition-smooth">Inscrever Projeto</Link></li>
+                <li><Link to="/login" className="text-white/80 hover:text-white transition-smooth">Área do Participante</Link></li>
                 <li><Link to="#" className="text-white/80 hover:text-white transition-smooth">Manual do Avaliador</Link></li>
                 <li><Link to="#" className="text-white/80 hover:text-white transition-smooth">Feiras Afiliadas</Link></li>
               </ul>
