@@ -19,7 +19,7 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateProjectData, ProjectMember, ProjectOrientador, ProjectCategory } from '../../types/Project';
 import ValidatedField, { validationRules } from '../../components/projects/ValidatedField';
-import { buscarEstados, buscarCidades, Estado, Cidade } from '../../utils/ibge';
+import { EstadoCidadeSelector } from '../../components/forms/EstadoCidadeSelector';
 
 interface AreaConhecimento {
   id: string;
@@ -83,14 +83,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
   const [loading, setLoading] = useState(false);
   const [searchingCPF, setSearchingCPF] = useState(false);
   
-  // Buscar dados do usuário autenticado
   const { user } = useAuth();
-
-  // Estados para IBGE
-  const [estadosIBGE, setEstadosIBGE] = useState<Estado[]>([]);
-  const [cidadesIBGE, setCidadesIBGE] = useState<Cidade[]>([]);
-  const [carregandoEstadosIBGE, setCarregandoEstadosIBGE] = useState(true);
-  const [carregandoCidadesIBGE, setCarregandoCidadesIBGE] = useState(false);
 
   // Estados para áreas hierárquicas
   const [areasNivel1, setAreasNivel1] = useState<AreaConhecimento[]>([]);
@@ -98,6 +91,14 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
   const [areasNivel3, setAreasNivel3] = useState<AreaConhecimento[]>([]);
   const [selectedAreaNivel1, setSelectedAreaNivel1] = useState('');
   const [selectedAreaNivel2, setSelectedAreaNivel2] = useState('');
+
+  // IDs temporários para o EstadoCidadeSelector
+  const [institutionStateId, setInstitutionStateId] = useState<number | null>(null);
+  const [institutionCityId, setInstitutionCityId] = useState<number | null>(null);
+  const [memberStateIds, setMemberStateIds] = useState<(number | null)[]>([]);
+  const [memberCityIds, setMemberCityIds] = useState<(number | null)[]>([]);
+  const [orientadorStateIds, setOrientadorStateIds] = useState<(number | null)[]>([]);
+  const [orientadorCityIds, setOrientadorCityIds] = useState<(number | null)[]>([]);
 
   const [formData, setFormData] = useState<CreateProjectData>({
     title: '',
@@ -120,7 +121,7 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
     isIndigenous: false,
     hasDisability: false,
     socialVulnerability: false,
-    members: [], // Será pré-populado com o usuário logado
+    members: [],
     orientadores: [],
     paymentRequired: true,
     isPaymentExempt: false,
@@ -128,75 +129,78 @@ const CreateProject: React.FC<CreateProjectProps> = ({ onSubmit, onCancel }) => 
   });
 
   // Pré-popular com o usuário logado baseado no role
-// Pré-popular com o usuário logado baseado no role
-useEffect(() => {
-  if (user && user.role === 'AUTOR' && formData.members.length === 0) {
-    const userAsMember: ProjectMember = {
-      userId: user.id,
-      name: user.name || '',
-      email: user.email || '',
-      cpf: user.cpf || '',
-      rg: '',
-      birthDate: user.birthDate ? user.birthDate.split('T')[0] : '',
-      gender: user.gender || 'Prefiro não informar',
-      phone: user.phone || '',
-      address: user.address || '',
-      city: user.city || '',
-      state: user.state || '',
-      zipCode: user.zipCode || '',
-      schoolLevel: getSchoolLevelFromFormation(user.formation) || 'Ensino Superior',
-      schoolYear: '',
-      institution: user.institution || '',
-      isIndigenous: false,
-      hasDisability: false,
-      isRural: false
-    };
+  useEffect(() => {
+    if (user && user.role === 'AUTOR' && formData.members.length === 0) {
+      const userAsMember: ProjectMember = {
+        userId: user.id,
+        name: user.name || '',
+        email: user.email || '',
+        cpf: user.cpf || '',
+        rg: '',
+        birthDate: user.birthDate ? user.birthDate.split('T')[0] : '',
+        gender: user.gender || 'Prefiro não informar',
+        phone: user.phone || '',
+        address: user.address || '',
+        city: user.city || '',
+        state: user.state || '',
+        zipCode: user.zipCode || '',
+        schoolLevel: getSchoolLevelFromFormation(user.formation) || 'Ensino Superior',
+        schoolYear: '',
+        institution: user.institution || '',
+        isIndigenous: false,
+        hasDisability: false,
+        isRural: false
+      };
 
-    setFormData(prev => ({
-      ...prev,
-      members: [userAsMember],
-      institution: user.institution || prev.institution,
-      institutionCity: user.city || prev.institutionCity,
-      institutionState: user.state || prev.institutionState
-    }));
-  } else if (user && user.role === 'ORIENTADOR') {
-    // Para orientadores, apenas pré-popular dados institucionais
-    setFormData(prev => ({
-      ...prev,
-      institution: user.institution || prev.institution,
-      institutionCity: user.city || prev.institutionCity,
-      institutionState: user.state || prev.institutionState
-    }));
-  }
-}, [user, formData.members.length]);
+      setFormData(prev => ({
+        ...prev,
+        members: [userAsMember],
+        institution: user.institution || prev.institution,
+        institutionCity: user.city || prev.institutionCity,
+        institutionState: user.state || prev.institutionState
+      }));
 
-// Pré-popular orientador se o usuário for ORIENTADOR
-useEffect(() => {
-  if (user && user.role === 'ORIENTADOR' && formData.orientadores.length === 0) {
-    const userAsOrientador: ProjectOrientador = {
-      userId: user.id,
-      name: user.name || '',
-      email: user.email || '',
-      cpf: user.cpf || '',
-      phone: user.phone || '',
-      formation: user.formation || 'Não informado',
-      area: user.formation || 'Área não especificada',
-      institution: user.institution || '',
-      position: user.position || 'Orientador',
-      city: user.city || '',
-      state: user.state || '',
-      yearsExperience: 0,
-      lattesUrl: ''
-    };
+      setMemberStateIds([null]);
+      setMemberCityIds([null]);
+    } else if (user && user.role === 'ORIENTADOR') {
+      setFormData(prev => ({
+        ...prev,
+        institution: user.institution || prev.institution,
+        institutionCity: user.city || prev.institutionCity,
+        institutionState: user.state || prev.institutionState
+      }));
+    }
+  }, [user, formData.members.length]);
 
-    setFormData(prev => ({
-      ...prev,
-      orientadores: [userAsOrientador]
-    }));
-  }
-}, [user, formData.orientadores.length]);
+  // Pré-popular orientador se o usuário for ORIENTADOR
+  useEffect(() => {
+    if (user && user.role === 'ORIENTADOR' && formData.orientadores.length === 0) {
+      const userAsOrientador: ProjectOrientador = {
+        userId: user.id,
+        name: user.name || '',
+        email: user.email || '',
+        cpf: user.cpf || '',
+        phone: user.phone || '',
+        formation: user.formation || 'Não informado',
+        area: user.formation || 'Área não especificada',
+        institution: user.institution || '',
+        position: user.position || 'Orientador',
+        city: user.city || '',
+        state: user.state || '',
+        yearsExperience: 0,
+        lattesUrl: ''
+      };
 
-  // Helper function para determinar nível escolar
+      setFormData(prev => ({
+        ...prev,
+        orientadores: [userAsOrientador]
+      }));
+
+      setOrientadorStateIds([null]);
+      setOrientadorCityIds([null]);
+    }
+  }, [user, formData.orientadores.length]);
+
   const getSchoolLevelFromFormation = (formation?: string): string => {
     if (!formation) return 'Ensino Superior';
     
@@ -227,38 +231,6 @@ useEffect(() => {
     }
     
     return 'Ensino Superior';
-  };
-
-  // Carregar estados quando componente monta
-  useEffect(() => {
-    const carregarEstados = async () => {
-      setCarregandoEstadosIBGE(true);
-      const estadosData = await buscarEstados();
-      setEstadosIBGE(estadosData);
-      setCarregandoEstadosIBGE(false);
-    };
-    
-    carregarEstados();
-  }, []);
-
-  // Handler para mudança de estado da instituição
-  const handleEstadoInstituicaoChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const estadoId = e.target.value;
-    
-    setFormData(prev => ({ 
-      ...prev, 
-      institutionState: estadoId,
-      institutionCity: ''
-    }));
-    
-    if (estadoId) {
-      setCarregandoCidadesIBGE(true);
-      const cidadesData = await buscarCidades(parseInt(estadoId));
-      setCidadesIBGE(cidadesData);
-      setCarregandoCidadesIBGE(false);
-    } else {
-      setCidadesIBGE([]);
-    }
   };
 
   // Carregar áreas principais
@@ -344,13 +316,13 @@ useEffect(() => {
 
   const addMember = () => {
     if (!formData.category) {
-      console.log("ERROR:", 'Selecione uma categoria primeiro');
+      alert('Selecione uma categoria primeiro');
       return;
     }
 
     const maxMembers = CATEGORY_MEMBER_LIMITS[formData.category as ProjectCategory];
     if (formData.members.length >= maxMembers) {
-      console.log("ERROR:", `Categoria ${formData.category} permite no máximo ${maxMembers} integrantes`);
+      alert(`Categoria ${formData.category} permite no máximo ${maxMembers} integrantes`);
       return;
     }
 
@@ -378,12 +350,14 @@ useEffect(() => {
       ...prev,
       members: [...prev.members, newMember]
     }));
+
+    setMemberStateIds(prev => [...prev, null]);
+    setMemberCityIds(prev => [...prev, null]);
   };
 
   const removeMember = (index: number) => {
-    // Não permitir remover o primeiro membro se for AUTOR
     if (user?.role === 'AUTOR' && index === 0) {
-      console.log("ERROR:", 'Você não pode se remover como autor do projeto');
+      alert('Você não pode se remover como autor do projeto');
       return;
     }
 
@@ -391,12 +365,14 @@ useEffect(() => {
       ...prev,
       members: prev.members.filter((_, i) => i !== index)
     }));
+
+    setMemberStateIds(prev => prev.filter((_, i) => i !== index));
+    setMemberCityIds(prev => prev.filter((_, i) => i !== index));
   };
 
   const updateMember = (index: number, field: keyof ProjectMember, value: any) => {
-    // Não permitir editar campos críticos do primeiro membro se for AUTOR
     if (user?.role === 'AUTOR' && index === 0 && ['name', 'email', 'cpf'].includes(field)) {
-      console.log("ERROR:", 'Não é possível alterar dados básicos do autor principal');
+      alert('Não é possível alterar dados básicos do autor principal');
       return;
     }
 
@@ -406,9 +382,8 @@ useEffect(() => {
   };
 
   const searchMemberByCPF = async (index: number, cpf: string) => {
-    // Não permitir busca por CPF para o primeiro membro se for AUTOR
     if (user?.role === 'AUTOR' && index === 0) {
-      console.log("ERROR:", 'Você já está cadastrado como autor principal');
+      alert('Você já está cadastrado como autor principal');
       return;
     }
 
@@ -416,9 +391,8 @@ useEffect(() => {
       const userData = await searchUserByCPF(cpf);
       
       if (userData) {
-        // Verificar se não é o usuário logado (para qualquer role)
         if (userData.id === user?.id) {
-          console.log("ERROR:", user?.role === 'AUTOR' ? 'Você já está cadastrado como autor principal' : 'Você não pode se adicionar como integrante');
+          alert(user?.role === 'AUTOR' ? 'Você já está cadastrado como autor principal' : 'Você não pode se adicionar como integrante');
           return;
         }
 
@@ -440,18 +414,18 @@ useEffect(() => {
         };
 
         setFormData(prev => ({ ...prev, members: updatedMembers }));
-        console.log("SUCCESS:", 'Dados preenchidos automaticamente');
+        alert('Dados preenchidos automaticamente');
       } else {
         alert('CPF não encontrado. Preencha os dados manualmente.');
       }
     } catch (error: any) {
-      console.log("ERROR:", error.message);
+      alert(error.message);
     }
   };
 
   const addOrientador = () => {
     if (formData.orientadores.length >= 2) {
-      console.log("ERROR:", 'Máximo de 2 orientadores permitido (1 orientador + 1 coorientador)');
+      alert('Máximo de 2 orientadores permitido (1 orientador + 1 coorientador)');
       return;
     }
 
@@ -474,6 +448,9 @@ useEffect(() => {
       ...prev,
       orientadores: [...prev.orientadores, newOrientador]
     }));
+
+    setOrientadorStateIds(prev => [...prev, null]);
+    setOrientadorCityIds(prev => [...prev, null]);
   };
 
   const removeOrientador = (index: number) => {
@@ -481,17 +458,19 @@ useEffect(() => {
       ...prev,
       orientadores: prev.orientadores.filter((_, i) => i !== index)
     }));
+
+    setOrientadorStateIds(prev => prev.filter((_, i) => i !== index));
+    setOrientadorCityIds(prev => prev.filter((_, i) => i !== index));
   };
 
   const updateOrientador = (index: number, field: keyof ProjectOrientador, value: any) => {
-    // Validação para não permitir que membros sejam orientadores
     if (field === 'email' || field === 'cpf') {
       const isUserMember = formData.members.some(member => 
         member.email === value || member.cpf === value
       );
       
       if (isUserMember) {
-        console.log("ERROR:", 'Integrantes do projeto não podem ser orientadores');
+        alert('Integrantes do projeto não podem ser orientadores');
         return;
       }
     }
@@ -506,13 +485,12 @@ useEffect(() => {
       const userData = await searchUserByCPF(cpf);
       
       if (userData) {
-        // Validar se não é membro do projeto
         const isProjectMember = formData.members.some(member => 
           member.email === userData.email || member.cpf === userData.cpf
         );
 
         if (isProjectMember) {
-          console.log("ERROR:", 'Integrantes do projeto não podem ser orientadores');
+          alert('Integrantes do projeto não podem ser orientadores');
           return;
         }
 
@@ -532,12 +510,12 @@ useEffect(() => {
         };
 
         setFormData(prev => ({ ...prev, orientadores: updatedOrientadores }));
-        console.log("SUCCESS:", 'Dados preenchidos automaticamente');
+        alert('Dados preenchidos automaticamente');
       } else {
         alert('CPF não encontrado. Preencha os dados manualmente.');
       }
     } catch (error: any) {
-      console.log("ERROR:", error.message);
+      alert(error.message);
     }
   };
 
@@ -570,7 +548,6 @@ useEffect(() => {
         return true;
 
       case 2:
-        // Para AUTOR: deve ter pelo menos ele mesmo como membro
         if (user?.role === 'AUTOR') {
           if (formData.members.length === 0) return false;
           return formData.members.every(member => 
@@ -583,9 +560,7 @@ useEffect(() => {
             member.institution.trim().length >= 2
           );
         }
-        // Para ORIENTADOR: pode não ter membros (serão adicionados)
         if (user?.role === 'ORIENTADOR') {
-          // Se tem membros, validar que estão preenchidos corretamente
           if (formData.members.length > 0) {
             return formData.members.every(member => 
               member.name.trim().length >= 2 &&
@@ -597,44 +572,41 @@ useEffect(() => {
               member.institution.trim().length >= 2
             );
           }
-          return true; // Orientador pode prosseguir sem membros
+          return true;
         }
         return true;
 
       case 3:
-  // Se o usuário é ORIENTADOR, pular esta validação (já tem orientador automático)
-  if (user?.role === 'ORIENTADOR') {
-    return true;
-  }
-  
-  // Para outros roles, validar orientadores normalmente
-  if (formData.orientadores.length === 0) return false;
-  return formData.orientadores.every(orientador =>
-    orientador.name.trim().length >= 2 &&
-    orientador.email.trim() &&
-    orientador.formation.trim().length >= 5 &&
-    orientador.area.trim().length >= 3 &&
-    orientador.institution.trim().length >= 2
-  );
+        if (user?.role === 'ORIENTADOR') {
+          return true;
+        }
+        
+        if (formData.orientadores.length === 0) return false;
+        return formData.orientadores.every(orientador =>
+          orientador.name.trim().length >= 2 &&
+          orientador.email.trim() &&
+          orientador.formation.trim().length >= 5 &&
+          orientador.area.trim().length >= 3 &&
+          orientador.institution.trim().length >= 2
+        );
 
-default:
-  return true;
+      default:
+        return true;
     }
   };
 
   const nextStep = () => {
-  if (validateStep(currentStep)) {
-    // Se está no step 2 e o usuário é ORIENTADOR, pular direto para submit
-    if (currentStep === 2 && user?.role === 'ORIENTADOR') {
-      handleSubmit(); // Finalizar direto
-      return;
+    if (validateStep(currentStep)) {
+      if (currentStep === 2 && user?.role === 'ORIENTADOR') {
+        handleSubmit();
+        return;
+      }
+      
+      setCurrentStep(prev => Math.min(prev + 1, 3));
+    } else {
+      alert('Por favor, preencha todos os campos obrigatórios corretamente');
     }
-    
-    setCurrentStep(prev => Math.min(prev + 1, 3));
-  } else {
-    console.log("ERROR:", 'Por favor, preencha todos os campos obrigatórios corretamente');
-  }
-};
+  };
 
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -642,22 +614,21 @@ default:
 
   const handleSubmit = async () => {
     if (!validateStep(3)) {
-      console.log("ERROR:", 'Por favor, preencha todos os campos obrigatórios corretamente');
+      alert('Por favor, preencha todos os campos obrigatórios corretamente');
       return;
     }
 
     setLoading(true);
     try {
       await onSubmit(formData);
-      console.log("SUCCESS:", 'Projeto criado com sucesso!');
+      alert('Projeto criado com sucesso!');
     } catch (error: any) {
-      console.log("ERROR:", error.message || 'Erro ao criar projeto');
+      alert(error.message || 'Erro ao criar projeto');
     } finally {
       setLoading(false);
     }
   };
 
-  // Renderizar etapa 1 - Dados do Projeto
   const renderStep1 = () => (
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-6">
@@ -788,8 +759,7 @@ default:
         </div>
       )}
 
-      {/* Instituição com IBGE */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="space-y-4">
         <ValidatedField
           label="Instituição"
           required
@@ -800,51 +770,28 @@ default:
           placeholder="Nome da instituição"
         />
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Estado</label>
-          <select
-            value={formData.institutionState}
-            onChange={handleEstadoInstituicaoChange}
-            disabled={carregandoEstadosIBGE}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            <option value="">
-              {carregandoEstadosIBGE ? "Carregando..." : "Selecione o estado"}
-            </option>
-            {estadosIBGE.map((estado) => (
-              <option key={estado.id} value={estado.id}>
-                {estado.nome}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Cidade</label>
-          <select
-            value={formData.institutionCity}
-            onChange={(e) => setFormData(prev => ({ ...prev, institutionCity: e.target.value }))}
-            disabled={!formData.institutionState || carregandoCidadesIBGE}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            <option value="">
-              {!formData.institutionState 
-                ? "Primeiro selecione o estado"
-                : carregandoCidadesIBGE 
-                  ? "Carregando..."
-                  : "Selecione a cidade"
-              }
-            </option>
-            {cidadesIBGE.map((cidade) => (
-              <option key={cidade.id} value={cidade.nome}>
-                {cidade.nome}
-              </option>
-            ))}
-          </select>
-        </div>
+        <EstadoCidadeSelector
+          estadoSelecionado={institutionStateId}
+          cidadeSelecionada={institutionCityId}
+          onEstadoChange={(estadoId, estado) => {
+            setInstitutionStateId(estadoId);
+            setFormData(prev => ({
+              ...prev,
+              institutionState: estado?.sigla || '',
+              institutionCity: ''
+            }));
+            setInstitutionCityId(null);
+          }}
+          onCidadeChange={(cidadeId, cidade) => {
+            setInstitutionCityId(cidadeId);
+            setFormData(prev => ({
+              ...prev,
+              institutionCity: cidade?.nome || ''
+            }));
+          }}
+        />
       </div>
 
-      {/* Características da escola/projeto */}
       <div className="space-y-4">
         <h4 className="font-medium text-gray-900">Características do Projeto</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -880,7 +827,6 @@ default:
         </div>
       </div>
 
-      {/* Palavras-chave */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">Palavras-chave</label>
         <div className="flex flex-wrap gap-2 mb-2">
@@ -916,7 +862,6 @@ default:
     </div>
   );
 
-  // Renderizar etapa 2 - Integrantes (pré-populado com usuário logado)
   const renderStep2 = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -934,7 +879,6 @@ default:
         </button>
       </div>
 
-      {/* Aviso baseado no role do usuário */}
       {user?.role === 'AUTOR' ? (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
@@ -997,7 +941,6 @@ default:
               )}
             </div>
 
-            {/* Busca por CPF para integrantes adicionais (não para autor principal se for AUTOR) */}
             {!(user?.role === 'AUTOR' && index === 0) && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1023,7 +966,6 @@ default:
               </div>
             )}
 
-            {/* Dados pessoais */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ValidatedField
                 label="Nome Completo"
@@ -1032,7 +974,7 @@ default:
                 onChange={(e) => updateMember(index, 'name', e.target.value)}
                 validationRules={validationRules.memberName}
                 maxLength={200}
-                disabled={user?.role === 'AUTOR' && index === 0} // Desabilitar para autor principal
+                disabled={user?.role === 'AUTOR' && index === 0}
               />
 
               <ValidatedField
@@ -1041,7 +983,7 @@ default:
                 value={member.email || ''}
                 onChange={(e) => updateMember(index, 'email', e.target.value)}
                 validationRules={validationRules.email}
-                disabled={user?.role === 'AUTOR' && index === 0} // Desabilitar para autor principal
+                disabled={user?.role === 'AUTOR' && index === 0}
               />
 
               <ValidatedField
@@ -1076,24 +1018,29 @@ default:
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <ValidatedField
-                label="Cidade"
-                required
-                value={member.city}
-                onChange={(e) => updateMember(index, 'city', e.target.value)}
-                validationRules={validationRules.city}
-                maxLength={100}
-              />
-
-              <ValidatedField
-                label="Estado"
-                required
-                value={member.state}
-                onChange={(e) => updateMember(index, 'state', e.target.value.toUpperCase())}
-                validationRules={validationRules.state}
-                maxLength={2}
-                placeholder="UF"
+            <div className="space-y-4 mt-4">
+              <EstadoCidadeSelector
+                estadoSelecionado={memberStateIds[index]}
+                cidadeSelecionada={memberCityIds[index]}
+                onEstadoChange={(estadoId, estado) => {
+                  const newStateIds = [...memberStateIds];
+                  newStateIds[index] = estadoId;
+                  setMemberStateIds(newStateIds);
+                  
+                  updateMember(index, 'state', estado?.sigla || '');
+                  updateMember(index, 'city', '');
+                  
+                  const newCityIds = [...memberCityIds];
+                  newCityIds[index] = null;
+                  setMemberCityIds(newCityIds);
+                }}
+                onCidadeChange={(cidadeId, cidade) => {
+                  const newCityIds = [...memberCityIds];
+                  newCityIds[index] = cidadeId;
+                  setMemberCityIds(newCityIds);
+                  
+                  updateMember(index, 'city', cidade?.nome || '');
+                }}
               />
 
               <ValidatedField
@@ -1170,7 +1117,6 @@ default:
     </div>
   );
 
-  // Renderizar etapa 3 - Orientadores
   const renderStep3 = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -1319,22 +1265,29 @@ default:
               maxLength={200}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <ValidatedField
-                label="Cidade"
-                value={orientador.city}
-                onChange={(e) => updateOrientador(index, 'city', e.target.value)}
-                validationRules={validationRules.city}
-                maxLength={100}
-              />
-
-              <ValidatedField
-                label="Estado"
-                value={orientador.state}
-                onChange={(e) => updateOrientador(index, 'state', e.target.value.toUpperCase())}
-                validationRules={validationRules.state}
-                maxLength={2}
-                placeholder="UF"
+            <div className="space-y-4 mt-4">
+              <EstadoCidadeSelector
+                estadoSelecionado={orientadorStateIds[index]}
+                cidadeSelecionada={orientadorCityIds[index]}
+                onEstadoChange={(estadoId, estado) => {
+                  const newStateIds = [...orientadorStateIds];
+                  newStateIds[index] = estadoId;
+                  setOrientadorStateIds(newStateIds);
+                  
+                  updateOrientador(index, 'state', estado?.sigla || '');
+                  updateOrientador(index, 'city', '');
+                  
+                  const newCityIds = [...orientadorCityIds];
+                  newCityIds[index] = null;
+                  setOrientadorCityIds(newCityIds);
+                }}
+                onCidadeChange={(cidadeId, cidade) => {
+                  const newCityIds = [...orientadorCityIds];
+                  newCityIds[index] = cidadeId;
+                  setOrientadorCityIds(newCityIds);
+                  
+                  updateOrientador(index, 'city', cidade?.nome || '');
+                }}
               />
 
               <div className="space-y-2">
@@ -1388,8 +1341,8 @@ default:
           </div>
           
           <div className="flex items-center mt-4 space-x-4">
-              {(user?.role === 'ORIENTADOR' ? [1, 2] : [1, 2, 3]).map((step) => (
-                <div key={step} className="flex items-center">
+            {(user?.role === 'ORIENTADOR' ? [1, 2] : [1, 2, 3]).map((step) => (
+              <div key={step} className="flex items-center">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     currentStep >= step
@@ -1399,7 +1352,7 @@ default:
                 >
                   {step}
                 </div>
-                {step < 3 && (
+                {step < (user?.role === 'ORIENTADOR' ? 2 : 3) && (
                   <div
                     className={`w-12 h-0.5 mx-2 ${
                       currentStep > step ? 'bg-blue-600' : 'bg-gray-200'

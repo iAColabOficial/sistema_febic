@@ -19,6 +19,7 @@ interface ValidatedFieldProps {
   className?: string;
   options?: Array<{ value: string; label: string }>;
   children?: React.ReactNode;
+  disabled?: boolean;
 }
 
 const ValidatedField: React.FC<ValidatedFieldProps> = ({
@@ -33,7 +34,8 @@ const ValidatedField: React.FC<ValidatedFieldProps> = ({
   validationRules = [],
   className = '',
   options = [],
-  children
+  children,
+  disabled = false
 }) => {
   // Verificar se há erros
   const errors = validationRules
